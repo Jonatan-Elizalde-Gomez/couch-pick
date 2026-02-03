@@ -4,7 +4,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { getItemsPaginated, shuffle, updateItem, type Item, type ItemTipo, type ShuffleFilters } from "../api/items";
-import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
+import { MEDIA_TYPE_LABELS } from "../lib/constants";
 import {
   IconFilm,
   IconTv,

@@ -13,8 +13,6 @@ const CONFETTI_COLORS = [
   "rgb(168, 85, 247)",
 ];
 
-const CARD_W = 92;
-const CARD_H = 138;
 const CENTER_X = 0;
 const CENTER_Y = 0;
 const BASE_RADIUS = 120;

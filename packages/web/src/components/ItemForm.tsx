@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormSetValue } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -28,9 +28,22 @@ import "./ItemForm.css";
 
 const GENRE_SET = new Set(GENRE_OPTIONS);
 
+const schema = z.object({
+  tipo: z.enum(["movie", "series", "anime", "youtube"]),
+  titulo: z.string().min(1, "Título requerido"),
+  descripcion: z.string().optional(),
+  posterUrl: z.string().url().optional().or(z.literal("")),
+  url: z.string().url().optional().or(z.literal("")),
+  visto: z.boolean(),
+  tagsStr: z.string().optional(),
+  generosStr: z.string().optional(),
+});
+
+type FormData = z.infer<typeof schema>;
+
 function applyFormFill(
   data: FormFillData,
-  setValue: (name: keyof FormData, value: unknown) => void,
+  setValue: UseFormSetValue<FormData>,
   currentTags: string[],
   currentGeneros: string[]
 ) {
@@ -46,19 +59,6 @@ function applyFormFill(
   const allTags = [...new Set([...currentTags, ...extraTags, ...extraGenreTags])];
   if (allTags.length) setValue("tagsStr", allTags.join(", "));
 }
-
-const schema = z.object({
-  tipo: z.enum(["movie", "series", "anime", "youtube"]),
-  titulo: z.string().min(1, "Título requerido"),
-  descripcion: z.string().optional(),
-  posterUrl: z.string().url().optional().or(z.literal("")),
-  url: z.string().url().optional().or(z.literal("")),
-  visto: z.boolean(),
-  tagsStr: z.string().optional(),
-  generosStr: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
 
 const TYPE_ICONS: Record<ItemTipo, React.ComponentType<{ className?: string }>> = {
   movie: IconFilm,

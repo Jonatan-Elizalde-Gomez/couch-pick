@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { login as apiLogin, logout as apiLogout } from "../api/auth";
-import { setSession } from "../api/client";
 
 type AuthContextValue = {
   isAuthenticated: boolean;
