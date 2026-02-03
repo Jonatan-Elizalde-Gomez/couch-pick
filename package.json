@@ -6,6 +6,7 @@
   "scripts": {
     "dev:api": "npm run dev -w @couchpick/api",
     "dev:web": "npm run dev -w @couchpick/web",
+    "build": "npm run build -w @couchpick/web",
     "build:api": "npm run deploy -w @couchpick/api",
     "build:web": "npm run build -w @couchpick/web",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
