@@ -18,10 +18,6 @@
   "overrides": {
     "rollup-plugin-node-polyfills": "git+https://github.com/ionic-team/rollup-plugin-node-polyfills.git"
   },
-  "engines": {
-  "node": "20.x",
-  "npm": "10.8.2"
-},
   "devDependencies": {
     "concurrently": "^9.1.0",
     "rimraf": "^6.0.1",
