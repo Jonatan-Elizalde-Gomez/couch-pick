@@ -1,0 +1,28 @@
+name = "couchpick-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Bindings: rellenar IDs (ver README → Configuración → Worker API)
+[vars]
+ENVIRONMENT = "development"
+
+# D1: crear con "npx wrangler d1 create couchpick-db" y pegar aquí database_id
+# O: terraform output d1_database_id | Dashboard → D1 → tu base → columna ID
+[[d1_databases]]
+binding = "DB"
+database_name = "couchpick-db"
+database_id = "34738075-b43b-472e-afe6-99ce31d5e317"
+
+# R2: no hay ID; solo el nombre. Wrangler puede crear el bucket en el primer deploy.
+# O: Dashboard → R2 → Create bucket → nombre "couchpick-media"
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "couchpick-media"
+
+# KV: crear con "npx wrangler kv namespace create couchpick-metadata-cache"
+# y pegar aquí el "id" que imprime (o usar: terraform output kv_namespace_id)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "6b8743e60fdf4e44a20f381ed83f253c"
+
+# Rate limit por IP: implementado en código (lib/rateLimit.ts) usando KV (CACHE).

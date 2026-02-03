@@ -1,0 +1,178 @@
+.item-card {
+  width: 100%;
+  min-width: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.2s;
+}
+
+.item-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.item-card-poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.item-card-poster-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.item-card:hover .item-card-poster-inner {
+  transform: scale(1.05);
+}
+
+.item-card-poster-inner .item-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-card-poster-inner .item-card-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.item-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 50%, transparent 100%);
+  pointer-events: none;
+}
+
+.item-card-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--border) 100%);
+}
+
+.item-card-tipo {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.item-card-tipo.rounded-full {
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.item-card-tipo.pill.tipo-pelicula {
+  background: hsl(210 80% 45%);
+}
+
+.item-card-tipo.pill.tipo-serie {
+  background: hsl(142 60% 40%);
+}
+
+.item-card-tipo.pill.tipo-anime {
+  background: hsl(320 60% 50%);
+}
+
+.item-card-tipo.pill.tipo-youtube {
+  background: hsl(0 75% 50%);
+}
+
+.item-card-eye-wrap {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.item-card-eye-wrap.visto {
+  background: hsl(142 71% 40% / 0.25);
+  border-color: hsl(142 71% 40% / 0.5);
+}
+
+.item-card-eye-wrap.no-visto {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.item-card-eye-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--accent);
+}
+
+.item-card-eye-wrap.no-visto .item-card-eye-icon {
+  color: var(--text-muted);
+}
+
+.item-card-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+}
+
+.item-card-badge.visto {
+  background: var(--accent);
+  color: #fff;
+}
+
+.item-card-body {
+  padding: 0.75rem;
+}
+
+.item-card-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.item-card-tags .tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,412 @@
+.shuffle-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Confetti (estilo referencia) */
+.shuffle-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.shuffle-confetti-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  top: -10px;
+  animation: shuffle-confetti-fall linear forwards;
+}
+
+@keyframes shuffle-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.shuffle-modal {
+  position: relative;
+  z-index: 10;
+  background: var(--bg-card);
+  border-radius: 1rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  max-width: min(32rem, calc(100vw - 2rem));
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  transform: scale(1);
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.shuffle-modal-winner {
+  max-height: 90vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Spinning phase */
+.shuffle-spin {
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Contenedor para las fases: stack → explode → circle → spin → collapse → reveal */
+.shuffle-orbit-wrapper {
+  position: relative;
+  width: 420px;
+  height: 360px;
+  margin: 0 auto 1.5rem;
+}
+
+.shuffle-orbit-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 92px;
+  height: 138px;
+  margin-left: -46px;
+  margin-top: -69px;
+  will-change: transform;
+}
+
+.shuffle-orbit-card-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.shuffle-orbit-card-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Cards sin imagen: placeholder gris */
+.shuffle-orbit-card-inner-no-img {
+  background: linear-gradient(145deg, hsl(0 0% 18%), hsl(0 0% 24%));
+}
+
+.shuffle-orbit-card-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, hsl(0 0% 18%), hsl(0 0% 24%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shuffle-orbit-card-placeholder::after {
+  content: "";
+  width: 24px;
+  height: 24px;
+  background: hsl(0 0% 40%);
+  border-radius: 4px;
+  opacity: 0.6;
+}
+
+.shuffle-orbit-card-active .shuffle-orbit-card-inner {
+  box-shadow: 0 0 24px hsl(142 71% 40% / 0.8);
+  outline: 2px solid hsl(142 71% 40%);
+}
+
+.shuffle-text {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+/* Reveal phase - Winner modal */
+.shuffle-reveal {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.shuffle-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  color: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.shuffle-close-btn:hover {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.shuffle-winner-header {
+  background: linear-gradient(to right, hsl(142 71% 40% / 0.2), hsl(142 71% 40% / 0.1), hsl(142 71% 40% / 0.2));
+  padding: 1.5rem 1.5rem 1rem;
+  text-align: center;
+}
+
+.shuffle-winner-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: hsl(142 71% 40% / 0.2);
+  border: 2px solid hsl(142 71% 40% / 0.4);
+  margin-bottom: 0.75rem;
+  animation: shuffle-bounce 0.6s ease;
+}
+
+@keyframes shuffle-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.shuffle-winner-icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent);
+}
+
+.shuffle-winner-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.shuffle-winner-body {
+  padding: 1.5rem;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.shuffle-winner-flex {
+  display: flex;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.shuffle-winner-thumb {
+  position: relative;
+  width: 8rem;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.shuffle-winner-thumb img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+}
+
+.shuffle-winner-thumb-placeholder {
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: linear-gradient(145deg, hsl(0 0% 18%), hsl(0 0% 24%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shuffle-winner-thumb-placeholder::after {
+  content: "";
+  width: 32px;
+  height: 32px;
+  background: hsl(0 0% 40%);
+  border-radius: 6px;
+  opacity: 0.5;
+}
+
+.shuffle-winner-thumb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px hsl(142 71% 40% / 0.5);
+  pointer-events: none;
+}
+
+.shuffle-winner-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shuffle-winner-tipo {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 9999px;
+  margin-bottom: 0.5rem;
+}
+
+.shuffle-winner-tipo.tipo-pelicula { background: hsl(210 80% 45%); }
+.shuffle-winner-tipo.tipo-serie { background: hsl(142 60% 40%); }
+.shuffle-winner-tipo.tipo-anime { background: hsl(320 60% 50%); }
+.shuffle-winner-tipo.tipo-youtube { background: hsl(0 75% 50%); }
+
+.shuffle-winner-item-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shuffle-winner-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shuffle-winner-generos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+
+.shuffle-winner-genre {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border-radius: 6px;
+}
+
+.shuffle-winner-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.shuffle-winner-tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.shuffle-winner-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.btn-marcar-vista {
+  flex: 1;
+  min-width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-marcar-vista:hover {
+  background: var(--accent-hover);
+}
+
+.btn-marcar-vista .btn-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn-ver-externo {
+  flex: 1;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-ver-externo:hover {
+  background: var(--bg-card);
+  border-color: var(--text-muted);
+}
+
+.btn-ver-externo .btn-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn-cerrar {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-cerrar:hover {
+  background: var(--bg-card);
+  border-color: var(--text-muted);
+}

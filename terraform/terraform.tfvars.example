@@ -1,0 +1,12 @@
+# Copiar a terraform.tfvars y rellenar (terraform.tfvars no debe subirse a git)
+
+cloudflare_api_token   = "your-api-token"
+cloudflare_account_id = "your-account-id"
+zone_id               = "" # Opcional: si usas dominio en Cloudflare
+access_allowed_emails = ["user1@example.com", "user2@example.com"]
+project_name          = "couchpick"
+
+# Si usas dominio propio para la app (ej: app.midominio.com)
+# pages_domain = "app.midominio.com"
+# Si usas Pages por defecto, crear variable pages_domain en variables.tf
+# y configurar Access desde Zero Trust dashboard para couchpick.pages.dev

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+.output/
+.wrangler/
+
+# Env
+.env
+.env.local
+.env.*.local
+terraform.tfvars
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Terraform
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

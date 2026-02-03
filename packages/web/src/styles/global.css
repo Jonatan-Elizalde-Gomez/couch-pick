@@ -1,0 +1,62 @@
+:root {
+  --bg: hsl(0 0% 6%);
+  --bg-elevated: hsl(0 0% 9%);
+  --bg-card: hsl(0 0% 11%);
+  --bg-form: #1a1a1a;
+  --text: hsl(0 0% 98%);
+  --text-muted: hsl(0 0% 62%);
+  --accent: hsl(142 71% 40%);
+  --accent-hover: hsl(142 71% 48%);
+  --border: hsl(0 0% 22%);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --font-sans: "DM Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-hover);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+/* Utilidades para iconos (referencia Tailwind) */
+.w-4 { width: 1rem; }
+.h-4 { height: 1rem; }
+.w-3 { width: 0.75rem; }
+.h-3 { height: 0.75rem; }
