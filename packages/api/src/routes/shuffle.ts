@@ -16,8 +16,8 @@ function getQueryArray(url: URL, key: string): string[] {
  */
 export const shuffleRouter = new Hono<{ Bindings: Env }>();
 
-shuffleRouter.use("*", (c, next) => {
-  const err = requireAuth(c);
+shuffleRouter.use("*", async (c, next) => {
+  const err = await requireAuth(c);
   if (err) return err;
   return next();
 });

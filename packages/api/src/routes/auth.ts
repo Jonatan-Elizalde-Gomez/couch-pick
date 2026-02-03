@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { mockLogin, createSession, getSessionHeader } from "../lib/auth";
+import { validateLogin, createSession, getSessionHeader, revokeSession } from "../lib/auth";
 import type { Env } from "../bindings";
 
 const loginSchema = z.object({
@@ -17,13 +17,16 @@ export const auth = new Hono<{ Bindings: Env }>()
       return c.json({ error: "Email y contraseña requeridos" }, 400);
     }
     const { email, password } = parsed.data;
-    if (!mockLogin(email, password)) {
+    if (!validateLogin(c.env, email, password)) {
       return c.json({ error: "Credenciales incorrectas" }, 401);
     }
-    const token = createSession();
+    const token = await createSession(c);
     return c.json(
       { ok: true, session: token },
       { headers: { [getSessionHeader()]: token } }
     );
   })
-  .post("/logout", (c) => c.json({ ok: true }));
+  .post("/logout", async (c) => {
+    await revokeSession(c);
+    return c.json({ ok: true });
+  });

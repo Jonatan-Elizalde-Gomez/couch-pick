@@ -105,6 +105,12 @@ Después de aplicar Terraform (o crear recursos a mano), rellena los bindings:
 | `id` en `[[kv_namespaces]]` | Ver abajo (KV). Sin un ID válido, `wrangler deploy` falla. |
 | R2: `bucket_name` | Ver abajo (R2). Nombre del bucket; Wrangler puede crearlo en el primer deploy. |
 
+**Auth (login por lista de correos + contraseña):**  
+- **Correos permitidos:** en el Dashboard del Worker → **Settings** → **Variables** → añade `ALLOWED_EMAILS` = `tu@email.com, pareja@email.com` (separados por coma).  
+- **Contraseña:** no se pone en el código. Desde `packages/api` ejecuta `npx wrangler secret put APP_PASSWORD` y escribe la contraseña cuando pida.  
+- **Cambiar la contraseña:** vuelve a ejecutar `npx wrangler secret put APP_PASSWORD` con la nueva contraseña; las sesiones antiguas dejan de valer a los 24 h (o al cerrar sesión).  
+- Si no defines `ALLOWED_EMAILS` ni `APP_PASSWORD`, sigue funcionando el usuario de desarrollo `couch@pick.dev` / `couchpick`.
+
 **Si usaste Terraform:** ejecuta `terraform output d1_database_id` y `terraform output kv_namespace_id` y pega los valores en `wrangler.toml` en `<D1_DATABASE_ID>` y `<KV_NAMESPACE_ID>`. El bucket R2 se crea con Terraform; el nombre en `wrangler.toml` debe ser el mismo (`couchpick-media` por defecto).
 
 **Si no usaste Terraform** (crear recursos a mano):
@@ -299,7 +305,7 @@ La API (Hono) ya suele tener CORS. Si tu frontend está en `https://xxx.pages.de
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
 | GET | `/health` | No | Health check. |
-| POST | `/auth/login` | No | Login (MVP simulado). Body: `{ email, password, remember? }`. |
+| POST | `/auth/login` | No | Login por lista de correos (`ALLOWED_EMAILS`) + contraseña (`APP_PASSWORD`). Body: `{ email, password, remember? }`. |
 | GET | `/items` | Sí | Lista con filtros. Query: `tipo`, `tipoExcluir`, `genero`, `generoExcluir`, `tag`, `tagExcluir`, `soloNoVistos`, `page`, `limit`. |
 | GET | `/items/export` | Sí | Exporta todos los ítems (respaldo JSON). |
 | POST | `/items/import` | Sí | Importa respaldo. Body: `{ items: [...] }`. |

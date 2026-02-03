@@ -5,6 +5,11 @@ compatibility_date = "2024-01-01"
 # Bindings: rellenar IDs (ver README → Configuración → Worker API)
 [vars]
 ENVIRONMENT = "development"
+# Lista de correos permitidos (separados por coma). Ej: "tu@email.com, pareja@email.com"
+# ALLOWED_EMAILS = "tu@email.com, pareja@email.com"
+# Contraseña compartida: definir como secret (no poner aquí):
+#   wrangler secret put APP_PASSWORD
+# Para cambiar la contraseña: wrangler secret put APP_PASSWORD (y volver a desplegar)
 
 # D1: crear con "npx wrangler d1 create couchpick-db" y pegar aquí database_id
 # O: terraform output d1_database_id | Dashboard → D1 → tu base → columna ID

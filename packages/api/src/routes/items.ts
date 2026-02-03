@@ -28,8 +28,8 @@ function nanoid() {
 
 export const itemsRouter = new Hono<{ Bindings: Env }>();
 
-itemsRouter.use("*", (c, next) => {
-  const err = requireAuth(c);
+itemsRouter.use("*", async (c, next) => {
+  const err = await requireAuth(c);
   if (err) return err;
   return next();
 });
