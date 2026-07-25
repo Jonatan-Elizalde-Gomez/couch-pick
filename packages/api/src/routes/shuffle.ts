@@ -51,6 +51,8 @@ shuffleRouter.post("/", async (c) => {
   const tagsExcluir = getQueryArray(url, "tagExcluir");
   const generos = getQueryArray(url, "genero");
   const generosExcluir = getQueryArray(url, "generoExcluir");
+  const itemIds = getQueryArray(url, "itemId");
+  const itemIdsExcluir = getQueryArray(url, "itemIdExcluir");
 
   const db = getDb(c.env.DB);
   const conditions = [];
@@ -58,6 +60,8 @@ shuffleRouter.post("/", async (c) => {
   if (tipoExcluir.length > 0) conditions.push(not(inArray(items.tipo, tipoExcluir as any)));
   if (estados.length > 0) conditions.push(inArray(items.estado, estados as any));
   if (estadosExcluir.length > 0) conditions.push(not(inArray(items.estado, estadosExcluir as any)));
+  if (itemIds.length > 0) conditions.push(inArray(items.id, itemIds));
+  if (itemIdsExcluir.length > 0) conditions.push(not(inArray(items.id, itemIdsExcluir)));
 
   let list = conditions.length
     ? await db.select().from(items).where(and(...conditions))

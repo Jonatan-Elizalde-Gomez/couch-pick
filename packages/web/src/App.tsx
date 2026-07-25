@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -17,15 +17,6 @@ const pageTransition = {
     transition: {
       duration: 0.26,
       ease: [0.22, 1, 0.36, 1],
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -10,
-    scale: 0.996,
-    transition: {
-      duration: 0.18,
-      ease: [0.4, 0, 1, 1],
     },
   },
 };
@@ -61,38 +52,35 @@ function AppRoutes() {
   }, [location.pathname, navigate]);
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={location.pathname}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageTransition}
-        style={{ minHeight: "100vh" }}
-      >
-        <Routes location={location}>
-          <Route path="/" element={<Landing />} />
-          <Route path="/service-unavailable" element={<ServiceUnavailable />} />
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <Main />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/app/crud"
-            element={
-              <ProtectedRoute>
-                <Crud />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={location.pathname}
+      initial="initial"
+      animate="animate"
+      variants={pageTransition}
+      style={{ minHeight: "100vh" }}
+    >
+      <Routes location={location}>
+        <Route path="/" element={<Landing />} />
+        <Route path="/service-unavailable" element={<ServiceUnavailable />} />
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <Main />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/crud"
+          element={
+            <ProtectedRoute>
+              <Crud />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </motion.div>
   );
 }
 

@@ -9,10 +9,6 @@
   transition: box-shadow 0.2s;
 }
 
-.item-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
 .item-card-poster {
   position: relative;
   width: 100%;
@@ -28,10 +24,6 @@
   width: 100%;
   height: 100%;
   transition: transform 0.3s ease;
-}
-
-.item-card:hover .item-card-poster-inner {
-  transform: scale(1.05);
 }
 
 .item-card-poster-inner .item-card-img {
@@ -242,6 +234,16 @@
   .item-card-genre {
     max-width: 6.25rem;
     font-size: 0.66rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .item-card:hover .item-card-poster-inner {
+    transform: scale(1.05);
   }
 }
 

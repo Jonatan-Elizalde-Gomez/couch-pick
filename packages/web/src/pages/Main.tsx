@@ -22,6 +22,7 @@ import {
   IconPlay,
   IconYoutube,
   IconTrash2,
+  IconSearch,
   IconSettings,
   IconFilter,
   IconChevronUp,
@@ -33,6 +34,8 @@ import {
   IconEye,
   IconEyeOff,
   IconCircleDot,
+  IconPlus,
+  IconX,
 } from "../components/icons";
 import ItemCard from "../components/ItemCard";
 import ItemDetailModal from "../components/ItemDetailModal";
@@ -67,7 +70,11 @@ const emptyFilters: ShuffleFilters = {
   tagExcluir: [],
   estado: [],
   estadoExcluir: [],
+  itemId: [],
+  itemIdExcluir: [],
 };
+
+type FilterSectionKey = "tipo" | "genero" | "tag" | "titulo";
 
 function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
   return (
@@ -78,7 +85,9 @@ function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
     JSON.stringify(a.tag ?? []) === JSON.stringify(b.tag ?? []) &&
     JSON.stringify(a.tagExcluir ?? []) === JSON.stringify(b.tagExcluir ?? []) &&
     JSON.stringify(a.estado ?? []) === JSON.stringify(b.estado ?? []) &&
-    JSON.stringify(a.estadoExcluir ?? []) === JSON.stringify(b.estadoExcluir ?? [])
+    JSON.stringify(a.estadoExcluir ?? []) === JSON.stringify(b.estadoExcluir ?? []) &&
+    JSON.stringify(a.itemId ?? []) === JSON.stringify(b.itemId ?? []) &&
+    JSON.stringify(a.itemIdExcluir ?? []) === JSON.stringify(b.itemIdExcluir ?? [])
   );
 }
 
@@ -105,10 +114,12 @@ export default function Main() {
   const [shufflePlaying, setShufflePlaying] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [titleSearch, setTitleSearch] = useState("");
   const [openFilterSections, setOpenFilterSections] = useState({
     tipo: true,
     genero: false,
     tag: false,
+    titulo: false,
   });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const carouselScrollRef = useRef<HTMLDivElement>(null);
@@ -162,6 +173,8 @@ export default function Main() {
     ...(appliedFilters.tag?.length ? { tag: appliedFilters.tag } : {}),
     ...(appliedFilters.tagExcluir?.length ? { tagExcluir: appliedFilters.tagExcluir } : {}),
     ...(appliedFilters.estado?.length ? { estado: appliedFilters.estado } : {}),
+    ...(appliedFilters.itemId?.length ? { itemId: appliedFilters.itemId } : {}),
+    ...(appliedFilters.itemIdExcluir?.length ? { itemIdExcluir: appliedFilters.itemIdExcluir } : {}),
   }), [appliedFilters]);
 
   const hasPendingFilters = useMemo(() => !filtersEqual(filters, appliedFilters), [filters, appliedFilters]);
@@ -194,6 +207,24 @@ export default function Main() {
       return { ...f, tag: [...(f.tag ?? []), tag] };
     });
   };
+  const setItemFilterMode = (itemId: string, mode: "incluir" | "excluir" | "off") => {
+    setFilters((current) => {
+      const nextInclude = (current.itemId ?? []).filter((value) => value !== itemId);
+      const nextExclude = (current.itemIdExcluir ?? []).filter((value) => value !== itemId);
+
+      if (mode === "incluir") {
+        nextInclude.push(itemId);
+      } else if (mode === "excluir") {
+        nextExclude.push(itemId);
+      }
+
+      return {
+        ...current,
+        itemId: nextInclude,
+        itemIdExcluir: nextExclude,
+      };
+    });
+  };
   const toggleStatusFilter = (status: WatchStatus) => {
     setFilters((current) => {
       const currentStatuses = current.estado ?? [];
@@ -210,6 +241,7 @@ export default function Main() {
   };
   const clearAllFilters = () => {
     setAutoApply(true);
+    setTitleSearch("");
     setFilters({ ...emptyFilters });
     setAppliedFilters({ ...emptyFilters });
   };
@@ -220,11 +252,14 @@ export default function Main() {
     (filters.generoExcluir?.length ?? 0) +
     (filters.tag?.length ?? 0) +
     (filters.tagExcluir?.length ?? 0) +
-    (filters.estado?.length ?? 0);
+    (filters.estado?.length ?? 0) +
+    (filters.itemId?.length ?? 0) +
+    (filters.itemIdExcluir?.length ?? 0);
   const tipoActiveCount = (filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0);
   const generoActiveCount = (filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0);
   const tagActiveCount = (filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0);
   const statusActiveCount = filters.estado?.length ?? 0;
+  const titleActiveCount = (filters.itemId?.length ?? 0) + (filters.itemIdExcluir?.length ?? 0);
   const visibleGenreScopes = useMemo(() => getGenreGroupsForTypes(filters.tipo), [filters.tipo]);
   const visibleGenreOptions = useMemo(() => getVisibleGenreOptions(filters.tipo), [filters.tipo]);
   const genreOptionsByScope = useMemo(
@@ -235,7 +270,7 @@ export default function Main() {
     })).filter((group) => group.items.length > 0),
     [visibleGenreOptions, visibleGenreScopes]
   );
-  const toggleFilterSection = (section: "tipo" | "genero" | "tag") => {
+  const toggleFilterSection = (section: FilterSectionKey) => {
     setOpenFilterSections((current) => ({ ...current, [section]: !current[section] }));
   };
 
@@ -267,6 +302,8 @@ export default function Main() {
       if (filters.estado?.length && !filters.estado.includes(item.estado)) return false;
       if (filters.tipo?.length && !filters.tipo.includes(item.tipo)) return false;
       if (filters.tipoExcluir?.length && filters.tipoExcluir.includes(item.tipo)) return false;
+      if (filters.itemId?.length && !filters.itemId.includes(item.id)) return false;
+      if (filters.itemIdExcluir?.length && filters.itemIdExcluir.includes(item.id)) return false;
       if (!includesAny(item.generos, filters.genero)) return false;
       if (!excludesAll(item.generos, filters.generoExcluir)) return false;
       return true;
@@ -286,10 +323,60 @@ export default function Main() {
     filters.estado,
     filters.genero,
     filters.generoExcluir,
+    filters.itemId,
+    filters.itemIdExcluir,
     filters.tag,
     filters.tagExcluir,
     filters.tipo,
     filters.tipoExcluir,
+  ]);
+
+  const selectedTitleItems = useMemo(() => {
+    const selectedIds = new Set([...(filters.itemId ?? []), ...(filters.itemIdExcluir ?? [])]);
+    return catalogItems
+      .filter((item) => selectedIds.has(item.id))
+      .sort((a, b) => a.titulo.localeCompare(b.titulo, "es", { sensitivity: "base" }));
+  }, [catalogItems, filters.itemId, filters.itemIdExcluir]);
+
+  const titleSearchResults = useMemo(() => {
+    const query = titleSearch.trim().toLowerCase();
+    if (!query) return [];
+
+    return catalogItems
+      .filter((item) => {
+        const matchesText =
+          item.titulo.toLowerCase().includes(query) ||
+          (item.tags ?? []).some((tag) => tag.toLowerCase().includes(query));
+
+        if (!matchesText) return false;
+        if (filters.tipo?.length && !filters.tipo.includes(item.tipo)) return false;
+        if (filters.tipoExcluir?.length && filters.tipoExcluir.includes(item.tipo)) return false;
+        if (filters.estado?.length && !filters.estado.includes(item.estado)) return false;
+        if (!includesAny(item.generos, filters.genero)) return false;
+        if (!excludesAll(item.generos, filters.generoExcluir)) return false;
+        if (!includesAny(item.tags, filters.tag)) return false;
+        if (!excludesAll(item.tags, filters.tagExcluir)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const aMode = filters.itemId?.includes(a.id) ? 2 : filters.itemIdExcluir?.includes(a.id) ? 1 : 0;
+        const bMode = filters.itemId?.includes(b.id) ? 2 : filters.itemIdExcluir?.includes(b.id) ? 1 : 0;
+        if (aMode !== bMode) return bMode - aMode;
+        return a.titulo.localeCompare(b.titulo, "es", { sensitivity: "base" });
+      })
+      .slice(0, 8);
+  }, [
+    catalogItems,
+    filters.estado,
+    filters.genero,
+    filters.generoExcluir,
+    filters.itemId,
+    filters.itemIdExcluir,
+    filters.tag,
+    filters.tagExcluir,
+    filters.tipo,
+    filters.tipoExcluir,
+    titleSearch,
   ]);
 
   const onScroll = useCallback(() => {
@@ -600,6 +687,144 @@ export default function Main() {
             )}
           </div>
 
+          <div className="filters-panel-block filters-panel-card">
+            <div className="filters-card-header">
+              <button
+                type="button"
+                className="filters-accordion-trigger"
+                onClick={() => toggleFilterSection("titulo")}
+                aria-expanded={openFilterSections.titulo}
+              >
+                <div className="filters-accordion-copy">
+                  <span className="filters-panel-title">Títulos</span>
+                  <span className="filters-panel-hint">Arma un shuffle manual incluyendo o descartando títulos concretos desde tu catálogo.</span>
+                </div>
+                <div className="filters-accordion-meta">
+                  {titleActiveCount > 0 && (
+                    <span className="filters-count-badge">
+                      {titleActiveCount} activo{titleActiveCount === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {titleActiveCount > 0 && (
+                    <button
+                      type="button"
+                      className="filters-inline-clear"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilters((current) => ({ ...current, itemId: [], itemIdExcluir: [] }));
+                      }}
+                      aria-label="Limpiar filtro de títulos"
+                      title="Limpiar títulos"
+                    >
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
+                    </button>
+                  )}
+                  {openFilterSections.titulo ? <IconChevronUp className="filters-accordion-icon" /> : <IconChevronDown className="filters-accordion-icon" />}
+                </div>
+              </button>
+            </div>
+            {openFilterSections.titulo && (
+              <div className="title-filter-panel">
+                <div className="title-filter-search">
+                  <IconSearch className="title-filter-search-icon" />
+                  <input
+                    type="search"
+                    className="title-filter-search-input"
+                    placeholder="Busca un título o tag..."
+                    value={titleSearch}
+                    onChange={(event) => setTitleSearch(event.target.value)}
+                  />
+                </div>
+
+                {selectedTitleItems.length > 0 && (
+                  <div className="title-filter-selected">
+                    {selectedTitleItems.map((item) => {
+                      const mode = filters.itemId?.includes(item.id)
+                        ? "incluir"
+                        : filters.itemIdExcluir?.includes(item.id)
+                          ? "excluir"
+                          : "off";
+
+                      return (
+                        <div key={item.id} className={`title-filter-selected-card title-filter-selected-card-${mode}`}>
+                          <div className="title-filter-selected-copy">
+                            <span className="title-filter-selected-title">{item.titulo}</span>
+                            <span className="title-filter-selected-meta">
+                              {MEDIA_TYPE_LABELS[item.tipo]}{item.generos?.[0] ? ` · ${item.generos[0]}` : ""}
+                            </span>
+                          </div>
+                          <div className="title-filter-selected-actions">
+                            <span className={`title-filter-mode-pill title-filter-mode-pill-${mode}`}>
+                              {mode === "incluir" ? "Solo sí" : "Excluir"}
+                            </span>
+                            <button
+                              type="button"
+                              className="title-filter-remove-btn"
+                              onClick={() => setItemFilterMode(item.id, "off")}
+                              aria-label={`Quitar ${item.titulo} de la selección manual`}
+                            >
+                              <IconX className="title-filter-remove-icon" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {titleSearch.trim() ? (
+                  titleSearchResults.length > 0 ? (
+                    <div className="title-filter-results">
+                      {titleSearchResults.map((item) => {
+                        const isIncluded = filters.itemId?.includes(item.id) ?? false;
+                        const isExcluded = filters.itemIdExcluir?.includes(item.id) ?? false;
+
+                        return (
+                          <div key={item.id} className="title-filter-result-card">
+                            <div className="title-filter-result-copy">
+                              <span className="title-filter-result-title">{item.titulo}</span>
+                              <span className="title-filter-result-meta">
+                                {MEDIA_TYPE_LABELS[item.tipo]}
+                                {item.estado === "watching"
+                                  ? " · Viendo"
+                                  : item.estado === "watched"
+                                    ? " · Visto"
+                                    : " · No visto"}
+                              </span>
+                            </div>
+                            <div className="title-filter-result-actions">
+                              <button
+                                type="button"
+                                className={`title-filter-action title-filter-action-include ${isIncluded ? "title-filter-action-active" : ""}`}
+                                onClick={() => setItemFilterMode(item.id, isIncluded ? "off" : "incluir")}
+                              >
+                                <IconPlus className="title-filter-action-icon" />
+                                Incluir
+                              </button>
+                              <button
+                                type="button"
+                                className={`title-filter-action title-filter-action-exclude ${isExcluded ? "title-filter-action-active" : ""}`}
+                                onClick={() => setItemFilterMode(item.id, isExcluded ? "off" : "excluir")}
+                              >
+                                <IconX className="title-filter-action-icon" />
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="filters-panel-hint">No encontramos títulos que encajen con esa búsqueda y tus filtros actuales.</p>
+                  )
+                ) : (
+                  <p className="filters-panel-hint">Empieza escribiendo para sumar títulos concretos al shuffle o sacarlos de la mezcla.</p>
+                )}
+              </div>
+            )}
+          </div>
+
           {availableTags.length > 0 && (
             <div className="filters-panel-block filters-panel-card">
               <div className="filters-card-header">
@@ -687,20 +912,13 @@ export default function Main() {
             </div>
           </div>
 
-          <div className="filters-mobile-actions">
-            {!autoApply && hasPendingFilters && (
+          {!autoApply && hasPendingFilters && (
+            <div className="filters-mobile-actions">
               <button type="button" className="btn-aplicar-filtros filters-mobile-apply" onClick={applyFilters}>
                 Aplicar filtros
               </button>
-            )}
-            <button
-              type="button"
-              className="filters-mobile-close"
-              onClick={() => setFiltersOpen(false)}
-            >
-              Cerrar filtros
-            </button>
-          </div>
+            </div>
+          )}
         </form>
       </div>
 

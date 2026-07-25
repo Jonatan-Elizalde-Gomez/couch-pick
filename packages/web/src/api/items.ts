@@ -44,6 +44,8 @@ export interface ShuffleFilters {
   tagExcluir?: string[];
   genero?: string[];
   generoExcluir?: string[];
+  itemId?: string[];
+  itemIdExcluir?: string[];
 }
 
 export function isWatchedStatus(status: WatchStatus): boolean {
@@ -66,6 +68,8 @@ export function itemsListParams(filters: ShuffleFilters): string {
   filters.tagExcluir?.forEach((t) => p.append("tagExcluir", t));
   filters.genero?.forEach((g) => p.append("genero", g));
   filters.generoExcluir?.forEach((g) => p.append("generoExcluir", g));
+  filters.itemId?.forEach((id) => p.append("itemId", id));
+  filters.itemIdExcluir?.forEach((id) => p.append("itemIdExcluir", id));
   return p.toString();
 }
 

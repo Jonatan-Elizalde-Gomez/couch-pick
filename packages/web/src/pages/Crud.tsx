@@ -32,6 +32,8 @@ import {
   IconLogOut,
   IconShuffle,
   IconDotsHorizontal,
+  IconChevronUp,
+  IconChevronDown,
 } from "../components/icons";
 import {
   GENRE_GROUP_LABELS,
@@ -313,67 +315,165 @@ export default function Crud() {
 
   return (
     <main className="crud-layout">
-      <header className="crud-header">
-        <div className="crud-header-left">
-          <button
-            type="button"
-            className="crud-back"
-            onClick={() => navigate("/app")}
-            aria-label="Volver"
-          >
-            <IconArrowLeft className="crud-back-icon" />
-          </button>
-          <img
-            src="/couch-pick-logo-blanco.svg"
-            alt="Couch Pick"
-            className="crud-logo-image"
-          />
-          <div className="crud-brand-copy">
-            <h1 className="crud-title">Gestionar Contenido</h1>
-            <p className="crud-item-count">
-              {filteredItems.length} de {items.length}{" "}
-              {items.length === 1 ? "contenido" : "contenidos"}
-            </p>
+      <div className="crud-sticky-shell">
+        <header className="crud-header">
+          <div className="crud-header-left">
+            <button
+              type="button"
+              className="crud-back"
+              onClick={() => navigate("/app")}
+              aria-label="Volver"
+            >
+              <IconArrowLeft className="crud-back-icon" />
+            </button>
+            <img
+              src="/couch-pick-logo-blanco.svg"
+              alt="Couch Pick"
+              className="crud-logo-image"
+            />
+            <div className="crud-brand-copy">
+              <h1 className="crud-title">Gestionar Contenido</h1>
+              <p className="crud-item-count">
+                {filteredItems.length} de {items.length}{" "}
+                {items.length === 1 ? "contenido" : "contenidos"}
+              </p>
+            </div>
+          </div>
+
+          <div className="crud-header-right">
+            <button
+              type="button"
+              className="nav-btn"
+              onClick={() => navigate("/app")}
+              title="Volver a Shuffle"
+            >
+              <IconShuffle className="nav-btn-icon" />
+              Shuffle
+            </button>
+
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="crud-import-input"
+              aria-hidden
+              onChange={handleImport}
+            />
+
+            <button
+              type="button"
+              className="btn-ghost btn-ghost-icon nav-btn-logout"
+              onClick={() => setLogoutDialogOpen(true)}
+              aria-label="Cerrar sesi?n"
+              title="Cerrar sesi?n"
+            >
+              <IconLogOut className="nav-btn-icon" />
+            </button>
+          </div>
+        </header>
+
+        <div className="crud-toolbar-bar">
+          <div className="crud-toolbar-inner">
+            <div className="crud-toolbar">
+              <div className="crud-search-wrap">
+                <IconSearch className="crud-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="crud-search"
+                  placeholder="Buscar por título o tag..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+
+              <div className="crud-toolbar-actions-row">
+                <button
+                  type="button"
+                  className={`nav-btn ${filtersOpen ? "nav-btn-active" : ""}`}
+                  onClick={() => setFiltersOpen((open) => !open)}
+                  aria-expanded={filtersOpen}
+                >
+                  <IconFilter className="nav-btn-icon" />
+                  Filtros
+                  {hasActiveFilters && (
+                    <span className="crud-filters-badge">{activeFiltersCount}</span>
+                  )}
+                  {filtersOpen ? (
+                    <IconChevronUp className="nav-chevron" />
+                  ) : (
+                    <IconChevronDown className="nav-chevron" />
+                  )}
+                </button>
+
+                <div className="crud-actions-menu" ref={actionsMenuRef}>
+                  <button
+                    type="button"
+                    className={`nav-btn crud-actions-trigger ${
+                      actionsMenuOpen ? "nav-btn-active" : ""
+                    }`}
+                    onClick={() => setActionsMenuOpen((open) => !open)}
+                    aria-expanded={actionsMenuOpen}
+                    aria-label="M?s acciones"
+                    title="M?s acciones"
+                  >
+                    <IconDotsHorizontal className="nav-btn-icon" />
+                  </button>
+
+                  {actionsMenuOpen && (
+                    <div
+                      className="crud-actions-dropdown"
+                      role="menu"
+                      aria-label="Acciones de contenido"
+                    >
+                      <button
+                        type="button"
+                        className="crud-actions-dropdown-item"
+                        onClick={() => {
+                          setActionsMenuOpen(false);
+                          importInputRef.current?.click();
+                        }}
+                      >
+                        <IconUpload className="nav-btn-icon" />
+                        Importar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="crud-actions-dropdown-item"
+                        onClick={() => {
+                          setActionsMenuOpen(false);
+                          void handleExport();
+                        }}
+                      >
+                        <IconDownload className="nav-btn-icon" />
+                        Exportar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  className="nav-btn crud-clear-all-btn"
+                  onClick={clearAllFilters}
+                  title="Limpiar todos los filtros"
+                >
+                  <IconTrash2 className="filters-limpiar-icon" />
+                  Limpiar todo
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="crud-header-right">
-          <button
-            type="button"
-            className="nav-btn"
-            onClick={() => navigate("/app")}
-            title="Volver a Shuffle"
-          >
-            <IconShuffle className="nav-btn-icon" />
-            Shuffle
-          </button>
-
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".json,application/json"
-            className="crud-import-input"
-            aria-hidden
-            onChange={handleImport}
-          />
-
-          <button
-            type="button"
-            className="btn-ghost btn-ghost-icon nav-btn-logout"
-            onClick={() => setLogoutDialogOpen(true)}
-            aria-label="Cerrar sesión"
-            title="Cerrar sesión"
-          >
-            <IconLogOut className="nav-btn-icon" />
-          </button>
-        </div>
-      </header>
+      </div>
 
       <ConfirmDialog
         open={logoutDialogOpen}
-        title="Cerrar sesión"
+        title="Cerrar sesi?n"
         description="Vas a salir de tu cuenta actual en Couch Pick."
-        confirmLabel="Sí, cerrar sesión"
+        confirmLabel="S?, cerrar sesi?n"
         tone="danger"
         onCancel={() => setLogoutDialogOpen(false)}
         onConfirm={async () => {
@@ -382,299 +482,213 @@ export default function Crud() {
         }}
       />
 
-      <div className="crud-toolbar-bar">
-        <div className="crud-toolbar-inner">
-          <div className="crud-toolbar">
-            <div className="crud-search-wrap">
-              <IconSearch className="crud-search-icon" aria-hidden />
-              <input
-                type="search"
-                className="crud-search"
-                placeholder="Buscar por título o tag..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
-
-            <button
-              type="button"
-              className={`nav-btn ${filtersOpen ? "nav-btn-active" : ""}`}
-              onClick={() => setFiltersOpen((open) => !open)}
-              aria-expanded={filtersOpen}
-            >
-              <IconFilter className="nav-btn-icon" />
-              Filtros
-              {hasActiveFilters && (
-                <span className="crud-filters-badge">{activeFiltersCount}</span>
-              )}
-            </button>
-
-            <div className="crud-actions-menu" ref={actionsMenuRef}>
-              <button
-                type="button"
-                className={`nav-btn crud-actions-trigger ${
-                  actionsMenuOpen ? "nav-btn-active" : ""
-                }`}
-                onClick={() => setActionsMenuOpen((open) => !open)}
-                aria-expanded={actionsMenuOpen}
-                aria-label="Más acciones"
-                title="Más acciones"
-              >
-                <IconDotsHorizontal className="nav-btn-icon" />
-              </button>
-
-              {actionsMenuOpen && (
-                <div
-                  className="crud-actions-dropdown"
-                  role="menu"
-                  aria-label="Acciones de contenido"
-                >
-                  <button
-                    type="button"
-                    className="crud-actions-dropdown-item"
-                    onClick={() => {
-                      setActionsMenuOpen(false);
-                      importInputRef.current?.click();
-                    }}
-                  >
-                    <IconUpload className="nav-btn-icon" />
-                    Importar
-                  </button>
-
-                  <button
-                    type="button"
-                    className="crud-actions-dropdown-item"
-                    onClick={() => {
-                      setActionsMenuOpen(false);
-                      void handleExport();
-                    }}
-                  >
-                    <IconDownload className="nav-btn-icon" />
-                    Exportar
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="nav-btn crud-clear-all-btn"
-                onClick={clearAllFilters}
-                title="Limpiar todos los filtros"
-              >
-                <IconTrash2 className="filters-limpiar-icon" />
-                Limpiar todo
-              </button>
-            )}
-          </div>
-
-          <div className={`crud-filters-collapse ${filtersOpen ? "crud-filters-collapse-open" : ""}`}>
-            <div className="crud-filters-collapse-inner">
-              <div className="crud-filters-panel">
-                <div className="crud-filters-block">
-                  <div className="crud-filters-block-header">
-                    <div className="crud-filters-heading">
-                      <h4 className="crud-filters-label">Tipo</h4>
-                      <p className="crud-filters-hint">
-                        Define qué formatos quieres incluir o dejar fuera del listado.
-                      </p>
-                    </div>
-                    {(tipoFilters.length > 0 || tipoExcludeFilters.length > 0) && (
-                      <button
-                        type="button"
-                        className="filters-inline-clear"
-                        onClick={() => {
-                          setTipoFilters([]);
-                          setTipoExcludeFilters([]);
-                        }}
-                        title="Limpiar tipo"
-                      >
-                        <IconTrash2 className="filters-limpiar-icon" />
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="crud-filters-chips">
-                    {TIPOS.map((tipo) => {
-                      const mode = tipoFilters.includes(tipo)
-                        ? "incluir"
-                        : tipoExcludeFilters.includes(tipo)
-                          ? "excluir"
-                          : "off";
-
-                      return (
-                        <button
-                          key={tipo}
-                          type="button"
-                          onClick={() => cycleTipoFilter(tipo)}
-                          className={`filter-type-btn filter-chip filter-chip-${mode} ${
-                            mode === "off" ? "filter-type-btn-unselected" : MEDIA_TYPE_COLORS[tipo]
-                          }`}
-                        >
-                          {MEDIA_TYPE_LABELS[tipo]}
-                          {mode === "incluir" && (
-                            <span className="filter-chip-badge filter-chip-badge-incluir">
-                              Incluir
-                            </span>
-                          )}
-                          {mode === "excluir" && (
-                            <span className="filter-chip-badge filter-chip-badge-excluir">
-                              Excluir
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="crud-filters-block">
-                  <div className="crud-filters-block-header">
-                    <div className="crud-filters-heading">
-                      <h4 className="crud-filters-label">Géneros</h4>
-                      <p className="crud-filters-hint">
-                        Se agrupan por comunes, anime y película/serie según el tipo activo.
-                      </p>
-                    </div>
-                    {(generoFilters.length > 0 || generoExcludeFilters.length > 0) && (
-                      <button
-                        type="button"
-                        className="filters-inline-clear"
-                        onClick={() => {
-                          setGeneroFilters([]);
-                          setGeneroExcludeFilters([]);
-                        }}
-                        title="Limpiar géneros"
-                      >
-                        <IconTrash2 className="filters-limpiar-icon" />
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
-
-                  {genreOptionsByScope.length > 0 ? (
-                    <div className="crud-genre-groups">
-                      {genreOptionsByScope.map((group) => (
-                        <div key={group.scope} className="crud-genre-group">
-                          <div className="crud-genre-group-title">{group.title}</div>
-                          <div className="crud-filters-chips">
-                            {group.items.map((genre) => {
-                              const mode = generoFilters.includes(genre.label)
-                                ? "incluir"
-                                : generoExcludeFilters.includes(genre.label)
-                                  ? "excluir"
-                                  : "off";
-
-                              return (
-                                <button
-                                  key={genre.label}
-                                  type="button"
-                                  onClick={() => cycleGeneroFilter(genre.label)}
-                                  className={`filter-type-btn filter-chip filter-chip-${mode} ${
-                                    mode === "off" ? "filter-type-btn-unselected" : ""
-                                  }`}
-                                >
-                                  {genre.label}
-                                  {mode === "incluir" && (
-                                    <span className="filter-chip-badge filter-chip-badge-incluir">
-                                      Incluir
-                                    </span>
-                                  )}
-                                  {mode === "excluir" && (
-                                    <span className="filter-chip-badge filter-chip-badge-excluir">
-                                      Excluir
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="crud-filters-empty">
-                      Con el tipo activo actual no hay géneros aplicables para filtrar.
+      <div className={`crud-filters-collapse ${filtersOpen ? "crud-filters-collapse-open" : ""}`}>
+        <div className="crud-filters-collapse-inner">
+          <div className="crud-toolbar-inner">
+            <div className="crud-filters-panel">
+              <div className="crud-filters-block">
+                <div className="crud-filters-block-header">
+                  <div className="crud-filters-heading">
+                    <h4 className="crud-filters-label">Tipo</h4>
+                    <p className="crud-filters-hint">
+                      Define qué formatos quieres incluir o dejar fuera del listado.
                     </p>
+                  </div>
+                  {(tipoFilters.length > 0 || tipoExcludeFilters.length > 0) && (
+                    <button
+                      type="button"
+                      className="filters-inline-clear"
+                      onClick={() => {
+                        setTipoFilters([]);
+                        setTipoExcludeFilters([]);
+                      }}
+                      title="Limpiar tipo"
+                    >
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
+                    </button>
                   )}
                 </div>
 
-                <div className="crud-filters-block">
-                  <div className="crud-filters-block-header">
-                    <div className="crud-filters-heading">
-                      <h4 className="crud-filters-label">Estado</h4>
-                      <p className="crud-filters-hint">
-                        Toca un estado para incluirlo, vuelve a tocar para excluirlo y una vez más para quitarlo.
-                      </p>
-                    </div>
-                    {(estadoFilters.length > 0 || estadoExcludeFilters.length > 0) && (
-                      <button
-                        type="button"
-                        className="filters-inline-clear"
-                        onClick={() => {
-                          setEstadoFilters([]);
-                          setEstadoExcludeFilters([]);
-                        }}
-                        title="Limpiar estado"
-                      >
-                        <IconTrash2 className="filters-limpiar-icon" />
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
+                <div className="crud-filters-chips">
+                  {TIPOS.map((tipo) => {
+                    const mode = tipoFilters.includes(tipo)
+                      ? "incluir"
+                      : tipoExcludeFilters.includes(tipo)
+                        ? "excluir"
+                        : "off";
 
-                  <div className="crud-filters-chips">
+                    return (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => cycleTipoFilter(tipo)}
+                        className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                          mode === "off" ? "filter-type-btn-unselected" : MEDIA_TYPE_COLORS[tipo]
+                        }`}
+                      >
+                        {MEDIA_TYPE_LABELS[tipo]}
+                        {mode === "incluir" && (
+                          <span className="filter-chip-badge filter-chip-badge-incluir">
+                            Incluir
+                          </span>
+                        )}
+                        {mode === "excluir" && (
+                          <span className="filter-chip-badge filter-chip-badge-excluir">
+                            Excluir
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="crud-filters-block">
+                <div className="crud-filters-block-header">
+                  <div className="crud-filters-heading">
+                    <h4 className="crud-filters-label">Géneros</h4>
+                    <p className="crud-filters-hint">
+                      Se agrupan por comunes, anime y película/serie según el tipo activo.
+                    </p>
+                  </div>
+                  {(generoFilters.length > 0 || generoExcludeFilters.length > 0) && (
                     <button
                       type="button"
+                      className="filters-inline-clear"
+                      onClick={() => {
+                        setGeneroFilters([]);
+                        setGeneroExcludeFilters([]);
+                      }}
+                      title="Limpiar géneros"
+                    >
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                {genreOptionsByScope.length > 0 ? (
+                  <div className="crud-genre-groups">
+                    {genreOptionsByScope.map((group) => (
+                      <div key={group.scope} className="crud-genre-group">
+                        <div className="crud-genre-group-title">{group.title}</div>
+                        <div className="crud-filters-chips">
+                          {group.items.map((genre) => {
+                            const mode = generoFilters.includes(genre.label)
+                              ? "incluir"
+                              : generoExcludeFilters.includes(genre.label)
+                                ? "excluir"
+                                : "off";
+
+                            return (
+                              <button
+                                key={genre.label}
+                                type="button"
+                                onClick={() => cycleGeneroFilter(genre.label)}
+                                className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                                  mode === "off" ? "filter-type-btn-unselected" : ""
+                                }`}
+                              >
+                                {genre.label}
+                                {mode === "incluir" && (
+                                  <span className="filter-chip-badge filter-chip-badge-incluir">
+                                    Incluir
+                                  </span>
+                                )}
+                                {mode === "excluir" && (
+                                  <span className="filter-chip-badge filter-chip-badge-excluir">
+                                    Excluir
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="crud-filters-empty">
+                    Con el tipo activo actual no hay géneros aplicables para filtrar.
+                  </p>
+                )}
+              </div>
+
+              <div className="crud-filters-block">
+                <div className="crud-filters-block-header">
+                  <div className="crud-filters-heading">
+                    <h4 className="crud-filters-label">Estado</h4>
+                    <p className="crud-filters-hint">
+                      Toca un estado para incluirlo, vuelve a tocar para excluirlo y una vez más para quitarlo.
+                    </p>
+                  </div>
+                  {(estadoFilters.length > 0 || estadoExcludeFilters.length > 0) && (
+                    <button
+                      type="button"
+                      className="filters-inline-clear"
                       onClick={() => {
                         setEstadoFilters([]);
                         setEstadoExcludeFilters([]);
                       }}
-                      className={`filter-type-btn ${
-                        estadoFilters.length === 0 && estadoExcludeFilters.length === 0
-                          ? "filter-type-btn-selected"
-                          : "filter-type-btn-unselected"
-                      }`}
+                      title="Limpiar estado"
                     >
-                      Todos
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
                     </button>
+                  )}
+                </div>
 
-                    {STATUS_OPTIONS.map(({ value, label, Icon }) => {
-                      const mode = estadoFilters.includes(value)
-                        ? "incluir"
-                        : estadoExcludeFilters.includes(value)
-                          ? "excluir"
-                          : "off";
+                <div className="crud-filters-chips">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEstadoFilters([]);
+                      setEstadoExcludeFilters([]);
+                    }}
+                    className={`filter-type-btn ${
+                      estadoFilters.length === 0 && estadoExcludeFilters.length === 0
+                        ? "filter-type-btn-selected"
+                        : "filter-type-btn-unselected"
+                    }`}
+                  >
+                    Todos
+                  </button>
 
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => cycleEstadoFilter(value)}
-                          className={`filter-type-btn filter-chip filter-chip-${mode} ${
-                            mode === "off" ? "filter-type-btn-unselected" : ""
-                          }`}
-                        >
-                          <Icon className="filter-type-icon" />
-                          {label}
-                          {mode === "incluir" && (
-                            <span className="filter-chip-badge filter-chip-badge-incluir">
-                              Incluir
-                            </span>
-                          )}
-                          {mode === "excluir" && (
-                            <span className="filter-chip-badge filter-chip-badge-excluir">
-                              Excluir
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {STATUS_OPTIONS.map(({ value, label, Icon }) => {
+                    const mode = estadoFilters.includes(value)
+                      ? "incluir"
+                      : estadoExcludeFilters.includes(value)
+                        ? "excluir"
+                        : "off";
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => cycleEstadoFilter(value)}
+                        className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                          mode === "off" ? "filter-type-btn-unselected" : ""
+                        }`}
+                      >
+                        <Icon className="filter-type-icon" />
+                        {label}
+                        {mode === "incluir" && (
+                          <span className="filter-chip-badge filter-chip-badge-incluir">
+                            Incluir
+                          </span>
+                        )}
+                        {mode === "excluir" && (
+                          <span className="filter-chip-badge filter-chip-badge-excluir">
+                            Excluir
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
             </div>
           </div>
         </div>
