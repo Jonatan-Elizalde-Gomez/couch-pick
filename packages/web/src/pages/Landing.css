@@ -206,6 +206,22 @@
   box-shadow: 0 0 0 2px hsl(142 71% 40% / 0.25);
 }
 
+.landing-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: -0.15rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.landing-remember input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
 .field-error {
   font-size: 0.8rem;
   color: hsl(0 70% 55%);

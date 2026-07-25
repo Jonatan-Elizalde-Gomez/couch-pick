@@ -5,7 +5,8 @@ import Main from "./pages/Main";
 import Crud from "./pages/Crud";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isBootstrapping } = useAuth();
+  if (isBootstrapping) return null;
   if (!isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

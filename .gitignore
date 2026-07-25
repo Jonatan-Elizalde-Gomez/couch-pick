@@ -5,11 +5,14 @@ node_modules/
 dist/
 .output/
 .wrangler/
+*.tsbuildinfo
+generated-launcher-preview.png
 
 # Env
 .env
 .env.local
 .env.*.local
+.env.android
 terraform.tfvars
 
 # IDE
@@ -30,4 +33,4 @@ npm-debug.log*
 terraform/.terraform/
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
+!.terraform.lock.hcl

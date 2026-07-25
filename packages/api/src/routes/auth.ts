@@ -1,6 +1,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { validateLogin, createSession, getSessionHeader, revokeSession } from "../lib/auth";
+import {
+  validateLogin,
+  createSession,
+  getSessionHeader,
+  getSessionExpiryDate,
+  revokeSession,
+  rotateSession,
+} from "../lib/auth";
 import type { Env } from "../bindings";
 
 const loginSchema = z.object({
@@ -14,15 +21,30 @@ export const auth = new Hono<{ Bindings: Env }>()
     const body = await c.req.json().catch(() => ({}));
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Email y contraseña requeridos" }, 400);
+      return c.json({ error: "Email y contrasena requeridos" }, 400);
     }
+
     const { email, password } = parsed.data;
     if (!validateLogin(c.env, email, password)) {
       return c.json({ error: "Credenciales incorrectas" }, 401);
     }
+
     const token = await createSession(c);
+    const expiresAt = getSessionExpiryDate();
     return c.json(
-      { ok: true, session: token },
+      { ok: true, session: token, expiresAt },
+      { headers: { [getSessionHeader()]: token } }
+    );
+  })
+  .post("/refresh", async (c) => {
+    const token = await rotateSession(c);
+    if (!token) {
+      return c.json({ error: "No autorizado" }, 401);
+    }
+
+    const expiresAt = getSessionExpiryDate();
+    return c.json(
+      { ok: true, session: token, expiresAt },
       { headers: { [getSessionHeader()]: token } }
     );
   })

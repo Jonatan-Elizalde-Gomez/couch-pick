@@ -13,6 +13,8 @@ app.use("*", logger());
 app.use("*", rateLimitMiddleware);
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
+  "https://localhost",
+  "capacitor://localhost",
   "https://afc83f6d.couch-pick.pages.dev/",
   "https://couch-pick.pages.dev",
 ];
