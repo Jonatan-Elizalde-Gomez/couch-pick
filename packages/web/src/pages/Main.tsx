@@ -772,16 +772,18 @@ export default function Main() {
 
                       return (
                         <div key={item.id} className={`title-filter-selected-card title-filter-selected-card-${mode}`}>
-                          <button
-                            type="button"
-                            className="title-filter-remove-btn title-filter-remove-btn-corner"
-                            onClick={() => setItemFilterMode(item.id, "off")}
-                            aria-label={`Quitar ${item.titulo} de la selección manual`}
-                          >
-                            <IconX className="title-filter-remove-icon" />
-                          </button>
                           <div className="title-filter-selected-copy">
-                            <span className="title-filter-selected-title">{item.titulo}</span>
+                            <div className="title-filter-selected-head">
+                              <span className="title-filter-selected-title">{item.titulo}</span>
+                              <button
+                                type="button"
+                                className="title-filter-remove-btn title-filter-remove-btn-inline"
+                                onClick={() => setItemFilterMode(item.id, "off")}
+                                aria-label={`Quitar ${item.titulo} de la selección manual`}
+                              >
+                                <IconX className="title-filter-remove-icon" />
+                              </button>
+                            </div>
                             <span className="title-filter-selected-meta">
                               {MEDIA_TYPE_LABELS[item.tipo]}{item.generos?.[0] ? ` · ${item.generos[0]}` : ""}
                             </span>
