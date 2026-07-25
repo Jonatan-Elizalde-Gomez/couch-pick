@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { getItems, getItemsPaginated, shuffle, updateItem, type Item, type ItemTipo, type ShuffleFilters } from "../api/items";
 import { getFilterPreferences, saveFilterPreferences } from "../api/preferences";
-import { MEDIA_TYPE_LABELS } from "../lib/constants";
+import { GENRE_GROUP_LABELS, getGenreGroupsForTypes, getVisibleGenreOptions, MEDIA_TYPE_LABELS } from "../lib/constants";
 import {
   IconFilm,
   IconTv,
@@ -25,7 +25,6 @@ import ItemCard from "../components/ItemCard";
 import ItemDetailModal from "../components/ItemDetailModal";
 import ShuffleAnimation from "../components/ShuffleAnimation";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { GENRE_OPTIONS } from "../lib/constants";
 import "./Main.css";
 
 const CARD_WIDTH = 180;
@@ -195,6 +194,16 @@ export default function Main() {
   const tipoActiveCount = (filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0);
   const generoActiveCount = (filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0);
   const tagActiveCount = (filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0);
+  const visibleGenreScopes = useMemo(() => getGenreGroupsForTypes(filters.tipo), [filters.tipo]);
+  const visibleGenreOptions = useMemo(() => getVisibleGenreOptions(filters.tipo), [filters.tipo]);
+  const genreOptionsByScope = useMemo(
+    () => visibleGenreScopes.map((scope) => ({
+      scope,
+      title: GENRE_GROUP_LABELS[scope],
+      items: visibleGenreOptions.filter((genre) => genre.scope === scope),
+    })).filter((group) => group.items.length > 0),
+    [visibleGenreOptions, visibleGenreScopes]
+  );
   const toggleFilterSection = (section: "tipo" | "genero" | "tag") => {
     setOpenFilterSections((current) => ({ ...current, [section]: !current[section] }));
   };
@@ -489,7 +498,7 @@ export default function Main() {
               >
                 <div className="filters-accordion-copy">
                   <span className="filters-panel-title">Géneros</span>
-                  <span className="filters-panel-hint">Dile al shuffle el mood o estilo exacto que estás buscando.</span>
+                  <span className="filters-panel-hint">Separados por comunes, anime y película/serie para que filtres con más contexto.</span>
                 </div>
                 <div className="filters-accordion-meta">
                   {generoActiveCount > 0 && (
@@ -518,24 +527,35 @@ export default function Main() {
             </div>
             {openFilterSections.genero && (
               <>
-                <div className="filters-type-wrap">
-                  {GENRE_OPTIONS.map((g) => {
-                    const mode = filters.genero?.includes(g) ? "incluir" : filters.generoExcluir?.includes(g) ? "excluir" : "off";
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => cycleGenero(g)}
-                        className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
-                        title={mode === "incluir" ? "Incluir: al menos uno" : mode === "excluir" ? "Excluir: ninguno" : "Clic para incluir"}
-                      >
-                        <span>{g}</span>
-                        {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
-                        {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+                {genreOptionsByScope.length > 0 ? (
+                  <div className="filters-genre-groups">
+                    {genreOptionsByScope.map((group) => (
+                      <div key={group.scope} className="filters-genre-group">
+                        <div className="filters-genre-group-title">{group.title}</div>
+                        <div className="filters-type-wrap">
+                          {group.items.map((genre) => {
+                            const mode = filters.genero?.includes(genre.label) ? "incluir" : filters.generoExcluir?.includes(genre.label) ? "excluir" : "off";
+                            return (
+                              <button
+                                key={genre.label}
+                                type="button"
+                                onClick={() => cycleGenero(genre.label)}
+                                className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
+                                title={mode === "incluir" ? "Incluir: al menos uno" : mode === "excluir" ? "Excluir: ninguno" : "Clic para incluir"}
+                              >
+                                <span>{genre.label}</span>
+                                {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
+                                {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="filters-panel-hint">Con el tipo activo actual no hay géneros aplicables para filtrar.</p>
+                )}
               </>
             )}
           </div>
@@ -676,7 +696,7 @@ export default function Main() {
                 ? "1 contenido disponible"
                 : `${total} contenidos disponibles`}
           </p>
-          <p className="shuffle-caption">Deja que Couch Pick te saque de la indecision.</p>
+          <p className="shuffle-caption">Deja que Couch Pick te saque de la indecisión.</p>
           {total === 0 && !isLoading && (
             <p className="shuffle-hint">Añade contenido en Gestionar para usar el shuffle.</p>
           )}
@@ -716,10 +736,10 @@ export default function Main() {
           <div className="cards-section-head">
             <div className="cards-section-copy">
               <h2 className="section-title">Contenidos disponibles</h2>
-              <p className="section-subtitle">Desliza para explorar tu coleccion y abre cualquier card para ver mas detalle.</p>
+              <p className="section-subtitle">Desliza para explorar tu colección y abre cualquier card para ver más detalle.</p>
             </div>
             {items.length > 0 && total > 0 && (
-              <div className="cards-nav" aria-label="Navegacion del carrusel">
+              <div className="cards-nav" aria-label="Navegación del carrusel">
                 <button
                   type="button"
                   className="cards-nav-btn"

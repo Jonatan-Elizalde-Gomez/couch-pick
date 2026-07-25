@@ -15,8 +15,8 @@ import {
   searchTmdbTv,
   getTmdbMovieDetails,
   getTmdbTvDetails,
-  searchJikanAnime,
-  getJikanAnimeDetails,
+  searchKitsuAnime,
+  getKitsuAnimeDetails,
   getYoutubeFromUrl,
   isTmdbConfigured,
   type SearchSuggestion,
@@ -51,12 +51,23 @@ function applyFormFill(
   if (data.descripcion !== undefined) setValue("descripcion", data.descripcion ?? "");
   if (data.posterUrl !== undefined) setValue("posterUrl", data.posterUrl ?? "");
   if (data.url !== undefined) setValue("url", data.url ?? "");
+
   const genresFromApi = data.generos ?? [];
-  const generosToSet = [...new Set([...currentGeneros, ...genresFromApi.filter((g) => GENRE_SET.has(g as typeof GENRE_OPTIONS[number]))])];
+  const generosToSet = [
+    ...new Set([
+      ...currentGeneros,
+      ...genresFromApi.filter((g) => GENRE_SET.has(g as (typeof GENRE_OPTIONS)[number])),
+    ]),
+  ];
+
   if (generosToSet.length) setValue("generosStr", generosToSet.join(", "));
+
   const extraTags = data.tags ?? [];
-  const extraGenreTags = genresFromApi.filter((g) => !GENRE_SET.has(g as typeof GENRE_OPTIONS[number]));
+  const extraGenreTags = genresFromApi.filter(
+    (g) => !GENRE_SET.has(g as (typeof GENRE_OPTIONS)[number])
+  );
   const allTags = [...new Set([...currentTags, ...extraTags, ...extraGenreTags])];
+
   if (allTags.length) setValue("tagsStr", allTags.join(", "));
 }
 
@@ -69,7 +80,10 @@ const TYPE_ICONS: Record<ItemTipo, React.ComponentType<{ className?: string }>> 
 
 function splitTrim(s: string | undefined): string[] {
   if (!s?.trim()) return [];
-  return s.split(/[,;]/).map((t) => t.trim()).filter(Boolean);
+  return s
+    .split(/[,;]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
 }
 
 export default function ItemForm({
@@ -92,7 +106,14 @@ export default function ItemForm({
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { register, handleSubmit, setValue, watch, getValues, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    getValues,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: item
       ? {
@@ -123,19 +144,19 @@ export default function ItemForm({
   const tags = splitTrim(tagsStr);
   const generos = splitTrim(generosStr);
 
-  // Búsqueda con debounce (películas, series, anime)
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q || q.length < 2) {
       setSuggestions([]);
       return;
     }
-    const t = setTimeout(async () => {
+
+    const timeoutId = setTimeout(async () => {
       setLoadingSearch(true);
       try {
         if (tipo === "movie") setSuggestions(await searchTmdbMovies(q));
         else if (tipo === "series") setSuggestions(await searchTmdbTv(q));
-        else if (tipo === "anime") setSuggestions(await searchJikanAnime(q));
+        else if (tipo === "anime") setSuggestions(await searchKitsuAnime(q));
         else setSuggestions([]);
       } catch {
         setSuggestions([]);
@@ -143,27 +164,27 @@ export default function ItemForm({
         setLoadingSearch(false);
       }
     }, 400);
-    return () => clearTimeout(t);
+
+    return () => clearTimeout(timeoutId);
   }, [searchQuery, tipo]);
 
   const onSelectSuggestion = useCallback(
-    async (s: SearchSuggestion) => {
+    async (suggestion: SearchSuggestion) => {
       setShowDropdown(false);
       setSearchQuery("");
       setSuggestions([]);
       setLoadingFill(true);
       try {
         let data: FormFillData | null = null;
-        if (tipo === "movie") data = await getTmdbMovieDetails(s.id);
-        else if (tipo === "series") data = await getTmdbTvDetails(s.id);
-        else if (tipo === "anime") data = await getJikanAnimeDetails(s.id);
+        if (tipo === "movie") data = await getTmdbMovieDetails(suggestion.id);
+        else if (tipo === "series") data = await getTmdbTvDetails(suggestion.id);
+        else if (tipo === "anime") data = await getKitsuAnimeDetails(suggestion.id);
+
         if (data) {
           const currentTags = splitTrim(getValues("tagsStr"));
           const currentGeneros = splitTrim(getValues("generosStr"));
           applyFormFill(data, setValue, currentTags, currentGeneros);
         }
-      } catch {
-        // ignore
       } finally {
         setLoadingFill(false);
       }
@@ -182,8 +203,6 @@ export default function ItemForm({
         const currentGeneros = splitTrim(getValues("generosStr"));
         applyFormFill(data, setValue, currentTags, currentGeneros);
       }
-    } catch {
-      // ignore
     } finally {
       setLoadingFill(false);
     }
@@ -195,21 +214,26 @@ export default function ItemForm({
     (tipo === "anime" || isTmdbConfigured());
   const showYoutubeFill = !isEdit && tipo === "youtube";
 
-  const toggleGenre = (g: string) => {
-    const next = generos.includes(g) ? generos.filter((x) => x !== g) : [...generos, g];
+  const toggleGenre = (genre: string) => {
+    const next = generos.includes(genre)
+      ? generos.filter((value) => value !== genre)
+      : [...generos, genre];
     setValue("generosStr", next.join(", "));
   };
 
   const addTag = () => {
-    const t = newTag.trim().toLowerCase();
-    if (t && !tags.includes(t)) {
-      setValue("tagsStr", tags.length ? `${tagsStr}, ${t}` : t);
+    const tag = newTag.trim().toLowerCase();
+    if (tag && !tags.includes(tag)) {
+      setValue("tagsStr", tags.length ? `${tagsStr}, ${tag}` : tag);
       setNewTag("");
     }
   };
 
   const removeTag = (tag: string) => {
-    setValue("tagsStr", tags.filter((t) => t !== tag).join(", "));
+    setValue(
+      "tagsStr",
+      tags.filter((value) => value !== tag).join(", ")
+    );
   };
 
   const addExistingTag = (tag: string) => {
@@ -239,17 +263,17 @@ export default function ItemForm({
       tags: splitTrim(data.tagsStr),
       generos: splitTrim(data.generosStr),
     };
+
     if (isEdit) updateMutation.mutate(body);
     else createMutation.mutate(body);
   };
 
   const loading = createMutation.isPending || updateMutation.isPending;
   const error = createMutation.error ?? updateMutation.error;
-  const existingTagsFiltered = existingTags.filter((t) => !tags.includes(t)).slice(0, 10);
+  const existingTagsFiltered = existingTags.filter((tag) => !tags.includes(tag)).slice(0, 10);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="item-form">
-      {/* Tipo: grid de 4 botones con iconos */}
       <div className="form-block">
         <label className="form-label">Tipo</label>
         <div className="type-selector">
@@ -271,7 +295,6 @@ export default function ItemForm({
         </div>
       </div>
 
-      {/* Autocompletar desde API (película, serie, anime) */}
       {showSearchAutocomplete && (
         <div className="form-block form-autocomplete-wrap" ref={dropdownRef}>
           <label className="form-label">
@@ -299,28 +322,28 @@ export default function ItemForm({
             {loadingSearch && <span className="autocomplete-spinner" aria-hidden />}
             {showDropdown && suggestions.length > 0 && (
               <ul className="autocomplete-dropdown" role="listbox">
-                {suggestions.map((s) => (
+                {suggestions.map((suggestion) => (
                   <li
-                    key={`${s.tipo}-${s.id}`}
+                    key={`${suggestion.tipo}-${suggestion.id}`}
                     role="option"
                     className="autocomplete-option"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      onSelectSuggestion(s);
+                      void onSelectSuggestion(suggestion);
                     }}
                   >
-                    {s.posterUrl && (
+                    {suggestion.posterUrl && (
                       <img
-                        src={s.posterUrl}
+                        src={suggestion.posterUrl}
                         alt=""
                         className="autocomplete-option-poster"
                       />
                     )}
                     <div className="autocomplete-option-text">
-                      <span className="autocomplete-option-title">{s.title}</span>
-                      {s.subtitle && (
+                      <span className="autocomplete-option-title">{suggestion.title}</span>
+                      {suggestion.subtitle && (
                         <span className="autocomplete-option-subtitle">
-                          {s.subtitle}
+                          {suggestion.subtitle}
                         </span>
                       )}
                     </div>
@@ -332,7 +355,6 @@ export default function ItemForm({
         </div>
       )}
 
-      {/* YouTube: rellenar desde URL */}
       {showYoutubeFill && (
         <div className="form-block">
           <label className="form-label">Rellenar desde URL de YouTube</label>
@@ -344,7 +366,9 @@ export default function ItemForm({
       )}
 
       <div className="form-block">
-        <label htmlFor="titulo" className="form-label">Título *</label>
+        <label htmlFor="titulo" className="form-label">
+          Título *
+        </label>
         <input
           id="titulo"
           type="text"
@@ -356,7 +380,9 @@ export default function ItemForm({
       </div>
 
       <div className="form-block">
-        <label htmlFor="posterUrl" className="form-label">URL de imagen</label>
+        <label htmlFor="posterUrl" className="form-label">
+          URL de imagen
+        </label>
         <input
           id="posterUrl"
           type="url"
@@ -382,7 +408,7 @@ export default function ItemForm({
             <button
               type="button"
               className="btn-fill-youtube"
-              onClick={onFillFromYoutubeUrl}
+              onClick={() => void onFillFromYoutubeUrl()}
               disabled={loadingFill}
             >
               {loadingFill ? "..." : "Rellenar"}
@@ -392,7 +418,9 @@ export default function ItemForm({
       </div>
 
       <div className="form-block">
-        <label htmlFor="descripcion" className="form-label">Descripción</label>
+        <label htmlFor="descripcion" className="form-label">
+          Descripción
+        </label>
         <textarea
           id="descripcion"
           className="form-textarea"
@@ -402,27 +430,25 @@ export default function ItemForm({
         />
       </div>
 
-      {/* Géneros: chips toggle */}
       <div className="form-block">
         <label className="form-label">Géneros</label>
         <div className="chips-wrap">
-          {GENRE_OPTIONS.map((g) => {
-            const isSelected = generos.includes(g);
+          {GENRE_OPTIONS.map((genre) => {
+            const isSelected = generos.includes(genre);
             return (
               <button
-                key={g}
+                key={genre}
                 type="button"
-                onClick={() => toggleGenre(g)}
+                onClick={() => toggleGenre(genre)}
                 className={`chip ${isSelected ? "chip-selected" : "chip-unselected"}`}
               >
-                {g}
+                {genre}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Tags: badges + input + existentes */}
       <div className="form-block">
         <label className="form-label">Tags</label>
         {tags.length > 0 && (
@@ -430,7 +456,12 @@ export default function ItemForm({
             {tags.map((tag) => (
               <span key={tag} className="tag-badge">
                 #{tag}
-                <button type="button" onClick={() => removeTag(tag)} className="tag-badge-remove" aria-label="Quitar">
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="tag-badge-remove"
+                  aria-label="Quitar"
+                >
                   <IconX className="w-3 h-3" />
                 </button>
               </span>
@@ -444,9 +475,19 @@ export default function ItemForm({
             placeholder="Nuevo tag..."
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addTag();
+              }
+            }}
           />
-          <button type="button" className="btn-icon-add" onClick={addTag} aria-label="Añadir tag">
+          <button
+            type="button"
+            className="btn-icon-add"
+            onClick={addTag}
+            aria-label="Añadir tag"
+          >
             <IconPlus className="w-4 h-4" />
           </button>
         </div>
@@ -455,7 +496,12 @@ export default function ItemForm({
             <p className="tags-existentes-label">Tags existentes:</p>
             <div className="tags-existentes-wrap">
               {existingTagsFiltered.map((tag) => (
-                <button key={tag} type="button" className="tag-suggestion" onClick={() => addExistingTag(tag)}>
+                <button
+                  key={tag}
+                  type="button"
+                  className="tag-suggestion"
+                  onClick={() => addExistingTag(tag)}
+                >
                   #{tag}
                 </button>
               ))}

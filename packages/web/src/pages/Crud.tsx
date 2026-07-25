@@ -30,7 +30,13 @@ import {
   IconShuffle,
   IconDotsHorizontal,
 } from "../components/icons";
-import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS, GENRE_OPTIONS } from "../lib/constants";
+import {
+  GENRE_GROUP_LABELS,
+  MEDIA_TYPE_COLORS,
+  MEDIA_TYPE_LABELS,
+  getGenreGroupsForTypes,
+  getVisibleGenreOptions,
+} from "../lib/constants";
 import "./Crud.css";
 import "./Main.css";
 
@@ -58,59 +64,68 @@ export default function Crud() {
   const handleExport = useCallback(async () => {
     try {
       const list = await exportBackup();
-      const blob = new Blob([JSON.stringify(list, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(list, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `couchpick-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       alert("Error al exportar. Revisa la consola.");
     }
   }, []);
 
   const handleImport = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       if (!file) return;
+
       const reader = new FileReader();
-      reader.onload = async (ev) => {
+      reader.onload = async (loadEvent) => {
         try {
-          const text = ev.target?.result as string;
+          const text = loadEvent.target?.result as string;
           const list = JSON.parse(text) as Item[];
-          if (!Array.isArray(list)) throw new Error("El archivo debe ser un array JSON.");
+          if (!Array.isArray(list)) {
+            throw new Error("El archivo debe ser un array JSON.");
+          }
           const { imported } = await importBackup(list);
           queryClient.invalidateQueries({ queryKey: ["items"] });
           alert(`Importados ${imported} ítems. La base anterior fue reemplazada.`);
-        } catch (err) {
-          console.error(err);
+        } catch (error) {
+          console.error(error);
           alert("Error al importar. Revisa que el archivo sea un backup JSON válido.");
         }
-        e.target.value = "";
+        event.target.value = "";
       };
+
       reader.readAsText(file);
     },
     [queryClient]
   );
 
   const filters = useMemo(() => {
-    const f: {
+    const next: {
       tipo?: ItemTipo[];
       tipoExcluir?: ItemTipo[];
       visto?: boolean;
       genero?: string[];
       generoExcluir?: string[];
     } = {};
-    if (tipoFilters.length > 0) f.tipo = tipoFilters;
-    if (tipoExcludeFilters.length > 0) f.tipoExcluir = tipoExcludeFilters;
-    if (estadoFilter === "watched") f.visto = true;
-    if (estadoFilter === "unwatched") f.visto = false;
-    if (generoFilters.length > 0) f.genero = generoFilters;
-    if (generoExcludeFilters.length > 0) f.generoExcluir = generoExcludeFilters;
-    return f;
+
+    if (tipoFilters.length > 0) next.tipo = tipoFilters;
+    if (tipoExcludeFilters.length > 0) next.tipoExcluir = tipoExcludeFilters;
+    if (estadoFilter === "watched") next.visto = true;
+    if (estadoFilter === "unwatched") next.visto = false;
+    if (generoFilters.length > 0) next.genero = generoFilters;
+    if (generoExcludeFilters.length > 0) next.generoExcluir = generoExcludeFilters;
+
+    return next;
   }, [tipoFilters, tipoExcludeFilters, estadoFilter, generoFilters, generoExcludeFilters]);
+
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["items", filters],
     queryFn: () => getItems(filters),
@@ -123,11 +138,35 @@ export default function Crud() {
     generoExcludeFilters.length > 0 ||
     estadoFilter !== "all" ||
     search.trim() !== "";
+
   const activeFiltersCount =
-    ((tipoFilters.length + tipoExcludeFilters.length) ? 1 : 0) +
-    ((generoFilters.length + generoExcludeFilters.length) ? 1 : 0) +
+    (tipoFilters.length + tipoExcludeFilters.length ? 1 : 0) +
+    (generoFilters.length + generoExcludeFilters.length ? 1 : 0) +
     (estadoFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
+
+  const visibleGenreScopes = useMemo(
+    () => getGenreGroupsForTypes(tipoFilters),
+    [tipoFilters]
+  );
+
+  const visibleGenreOptions = useMemo(
+    () => getVisibleGenreOptions(tipoFilters),
+    [tipoFilters]
+  );
+
+  const genreOptionsByScope = useMemo(
+    () =>
+      visibleGenreScopes
+        .map((scope) => ({
+          scope,
+          title: GENRE_GROUP_LABELS[scope],
+          items: visibleGenreOptions.filter((genre) => genre.scope === scope),
+        }))
+        .filter((group) => group.items.length > 0),
+    [visibleGenreOptions, visibleGenreScopes]
+  );
+
   const clearAllFilters = () => {
     setTipoFilters([]);
     setTipoExcludeFilters([]);
@@ -175,22 +214,28 @@ export default function Crud() {
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
-    const q = search.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
+
     return items.filter(
-      (i) =>
-        i.titulo.toLowerCase().includes(q) ||
-        (i.tags ?? []).some((t) => t.toLowerCase().includes(q))
+      (item) =>
+        item.titulo.toLowerCase().includes(query) ||
+        (item.tags ?? []).some((tag) => tag.toLowerCase().includes(query))
     );
   }, [items, search]);
 
   const existingTags = useMemo(
-    () => [...new Set(items.flatMap((i) => i.tags ?? []))],
+    () => [...new Set(items.flatMap((item) => item.tags ?? []))],
     [items]
   );
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Parameters<typeof updateItem>[1] }) =>
-      updateItem(id, body),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Parameters<typeof updateItem>[1];
+    }) => updateItem(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       setEditing(null);
@@ -252,9 +297,13 @@ export default function Crud() {
           />
           <div className="crud-brand-copy">
             <h1 className="crud-title">Gestionar Contenido</h1>
-            <p className="crud-item-count">{filteredItems.length} de {items.length} {items.length === 1 ? "contenido" : "contenidos"}</p>
+            <p className="crud-item-count">
+              {filteredItems.length} de {items.length}{" "}
+              {items.length === 1 ? "contenido" : "contenidos"}
+            </p>
           </div>
         </div>
+
         <div className="crud-header-right">
           <button
             type="button"
@@ -265,6 +314,7 @@ export default function Crud() {
             <IconShuffle className="nav-btn-icon" />
             Shuffle
           </button>
+
           <input
             ref={importInputRef}
             type="file"
@@ -273,12 +323,13 @@ export default function Crud() {
             aria-hidden
             onChange={handleImport}
           />
+
           <button
             type="button"
             className="btn-ghost btn-ghost-icon nav-btn-logout"
             onClick={() => setLogoutDialogOpen(true)}
-            aria-label="Cerrar sesion"
-            title="Cerrar sesion"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
           >
             <IconLogOut className="nav-btn-icon" />
           </button>
@@ -287,9 +338,9 @@ export default function Crud() {
 
       <ConfirmDialog
         open={logoutDialogOpen}
-        title="Cerrar sesion"
+        title="Cerrar sesión"
         description="Vas a salir de tu cuenta actual en Couch Pick."
-        confirmLabel="Si, cerrar sesion"
+        confirmLabel="Sí, cerrar sesión"
         tone="danger"
         onCancel={() => setLogoutDialogOpen(false)}
         onConfirm={async () => {
@@ -298,232 +349,319 @@ export default function Crud() {
         }}
       />
 
-      {/* Search and filters bar (referencia: border-b border-border/50 bg-card/30) */}
       <div className="crud-toolbar-bar">
         <div className="crud-toolbar-inner">
           <div className="crud-toolbar">
-          <div className="crud-search-wrap">
-            <IconSearch className="crud-search-icon" aria-hidden />
-            <input
-              type="search"
-              className="crud-search"
-              placeholder="Buscar por título o tag..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <button
-            type="button"
-            className={`nav-btn ${filtersOpen ? "nav-btn-active" : ""}`}
-            onClick={() => setFiltersOpen((o) => !o)}
-            aria-expanded={filtersOpen}
-          >
-            <IconFilter className="nav-btn-icon" />
-            Filtros
-            {hasActiveFilters && (
-              <span className="crud-filters-badge">{activeFiltersCount}</span>
-            )}
-          </button>
-          <div className="crud-actions-menu" ref={actionsMenuRef}>
-            <button
-              type="button"
-              className={`nav-btn crud-actions-trigger ${actionsMenuOpen ? "nav-btn-active" : ""}`}
-              onClick={() => setActionsMenuOpen((open) => !open)}
-              aria-expanded={actionsMenuOpen}
-              aria-label="Más acciones"
-              title="Más acciones"
-            >
-              <IconDotsHorizontal className="nav-btn-icon" />
-            </button>
-            {actionsMenuOpen && (
-              <div className="crud-actions-dropdown" role="menu" aria-label="Acciones de contenido">
-                <button
-                  type="button"
-                  className="crud-actions-dropdown-item"
-                  onClick={() => {
-                    setActionsMenuOpen(false);
-                    importInputRef.current?.click();
-                  }}
-                >
-                  <IconUpload className="nav-btn-icon" />
-                  Importar
-                </button>
-                <button
-                  type="button"
-                  className="crud-actions-dropdown-item"
-                  onClick={() => {
-                    setActionsMenuOpen(false);
-                    void handleExport();
-                  }}
-                >
-                  <IconDownload className="nav-btn-icon" />
-                  Exportar
-                </button>
-              </div>
-            )}
-          </div>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              className="nav-btn crud-clear-all-btn"
-              onClick={clearAllFilters}
-              title="Limpiar todos los filtros"
-            >
-              <IconTrash2 className="filters-limpiar-icon" />
-              Limpiar todo
-            </button>
-          )}
-        </div>
+            <div className="crud-search-wrap">
+              <IconSearch className="crud-search-icon" aria-hidden />
+              <input
+                type="search"
+                className="crud-search"
+                placeholder="Buscar por título o tag..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
 
-        <div className={`crud-filters-collapse ${filtersOpen ? "crud-filters-collapse-open" : ""}`}>
-          <div className="crud-filters-collapse-inner">
-            <div className="crud-filters-panel">
-              <div className="crud-filters-block">
-                <div className="crud-filters-block-header">
-                  <h4 className="crud-filters-label">Tipo</h4>
-                  {(tipoFilters.length > 0 || tipoExcludeFilters.length > 0) && (
-                    <button
-                      type="button"
-                      className="filters-inline-clear"
-                      onClick={() => {
-                        setTipoFilters([]);
-                        setTipoExcludeFilters([]);
-                      }}
-                      title="Limpiar tipo"
-                    >
-                      <IconTrash2 className="filters-limpiar-icon" />
-                      Limpiar
-                    </button>
+            <button
+              type="button"
+              className={`nav-btn ${filtersOpen ? "nav-btn-active" : ""}`}
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+            >
+              <IconFilter className="nav-btn-icon" />
+              Filtros
+              {hasActiveFilters && (
+                <span className="crud-filters-badge">{activeFiltersCount}</span>
+              )}
+            </button>
+
+            <div className="crud-actions-menu" ref={actionsMenuRef}>
+              <button
+                type="button"
+                className={`nav-btn crud-actions-trigger ${
+                  actionsMenuOpen ? "nav-btn-active" : ""
+                }`}
+                onClick={() => setActionsMenuOpen((open) => !open)}
+                aria-expanded={actionsMenuOpen}
+                aria-label="Más acciones"
+                title="Más acciones"
+              >
+                <IconDotsHorizontal className="nav-btn-icon" />
+              </button>
+
+              {actionsMenuOpen && (
+                <div
+                  className="crud-actions-dropdown"
+                  role="menu"
+                  aria-label="Acciones de contenido"
+                >
+                  <button
+                    type="button"
+                    className="crud-actions-dropdown-item"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      importInputRef.current?.click();
+                    }}
+                  >
+                    <IconUpload className="nav-btn-icon" />
+                    Importar
+                  </button>
+
+                  <button
+                    type="button"
+                    className="crud-actions-dropdown-item"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      void handleExport();
+                    }}
+                  >
+                    <IconDownload className="nav-btn-icon" />
+                    Exportar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="nav-btn crud-clear-all-btn"
+                onClick={clearAllFilters}
+                title="Limpiar todos los filtros"
+              >
+                <IconTrash2 className="filters-limpiar-icon" />
+                Limpiar todo
+              </button>
+            )}
+          </div>
+
+          <div className={`crud-filters-collapse ${filtersOpen ? "crud-filters-collapse-open" : ""}`}>
+            <div className="crud-filters-collapse-inner">
+              <div className="crud-filters-panel">
+                <div className="crud-filters-block">
+                  <div className="crud-filters-block-header">
+                    <div className="crud-filters-heading">
+                      <h4 className="crud-filters-label">Tipo</h4>
+                      <p className="crud-filters-hint">
+                        Define qué formatos quieres incluir o dejar fuera del listado.
+                      </p>
+                    </div>
+                    {(tipoFilters.length > 0 || tipoExcludeFilters.length > 0) && (
+                      <button
+                        type="button"
+                        className="filters-inline-clear"
+                        onClick={() => {
+                          setTipoFilters([]);
+                          setTipoExcludeFilters([]);
+                        }}
+                        title="Limpiar tipo"
+                      >
+                        <IconTrash2 className="filters-limpiar-icon" />
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="crud-filters-chips">
+                    {TIPOS.map((tipo) => {
+                      const mode = tipoFilters.includes(tipo)
+                        ? "incluir"
+                        : tipoExcludeFilters.includes(tipo)
+                          ? "excluir"
+                          : "off";
+
+                      return (
+                        <button
+                          key={tipo}
+                          type="button"
+                          onClick={() => cycleTipoFilter(tipo)}
+                          className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                            mode === "off" ? "filter-type-btn-unselected" : MEDIA_TYPE_COLORS[tipo]
+                          }`}
+                        >
+                          {MEDIA_TYPE_LABELS[tipo]}
+                          {mode === "incluir" && (
+                            <span className="filter-chip-badge filter-chip-badge-incluir">
+                              Incluir
+                            </span>
+                          )}
+                          {mode === "excluir" && (
+                            <span className="filter-chip-badge filter-chip-badge-excluir">
+                              Excluir
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="crud-filters-block">
+                  <div className="crud-filters-block-header">
+                    <div className="crud-filters-heading">
+                      <h4 className="crud-filters-label">Géneros</h4>
+                      <p className="crud-filters-hint">
+                        Se agrupan por comunes, anime y película/serie según el tipo activo.
+                      </p>
+                    </div>
+                    {(generoFilters.length > 0 || generoExcludeFilters.length > 0) && (
+                      <button
+                        type="button"
+                        className="filters-inline-clear"
+                        onClick={() => {
+                          setGeneroFilters([]);
+                          setGeneroExcludeFilters([]);
+                        }}
+                        title="Limpiar géneros"
+                      >
+                        <IconTrash2 className="filters-limpiar-icon" />
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+
+                  {genreOptionsByScope.length > 0 ? (
+                    <div className="crud-genre-groups">
+                      {genreOptionsByScope.map((group) => (
+                        <div key={group.scope} className="crud-genre-group">
+                          <div className="crud-genre-group-title">{group.title}</div>
+                          <div className="crud-filters-chips">
+                            {group.items.map((genre) => {
+                              const mode = generoFilters.includes(genre.label)
+                                ? "incluir"
+                                : generoExcludeFilters.includes(genre.label)
+                                  ? "excluir"
+                                  : "off";
+
+                              return (
+                                <button
+                                  key={genre.label}
+                                  type="button"
+                                  onClick={() => cycleGeneroFilter(genre.label)}
+                                  className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                                    mode === "off" ? "filter-type-btn-unselected" : ""
+                                  }`}
+                                >
+                                  {genre.label}
+                                  {mode === "incluir" && (
+                                    <span className="filter-chip-badge filter-chip-badge-incluir">
+                                      Incluir
+                                    </span>
+                                  )}
+                                  {mode === "excluir" && (
+                                    <span className="filter-chip-badge filter-chip-badge-excluir">
+                                      Excluir
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="crud-filters-empty">
+                      Con el tipo activo actual no hay géneros aplicables para filtrar.
+                    </p>
                   )}
                 </div>
-                <div className="crud-filters-chips">
-                  {TIPOS.map((t) => {
-                    const mode = tipoFilters.includes(t)
-                      ? "incluir"
-                      : tipoExcludeFilters.includes(t)
-                        ? "excluir"
-                        : "off";
-                    return (
+
+                <div className="crud-filters-block">
+                  <div className="crud-filters-block-header">
+                    <div className="crud-filters-heading">
+                      <h4 className="crud-filters-label">Estado</h4>
+                      <p className="crud-filters-hint">
+                        Alterna entre todo el catálogo, solo vistos o solo pendientes.
+                      </p>
+                    </div>
+                    {estadoFilter !== "all" && (
                       <button
-                        key={t}
                         type="button"
-                        onClick={() => cycleTipoFilter(t)}
-                        className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : MEDIA_TYPE_COLORS[t]}`}
+                        className="filters-inline-clear"
+                        onClick={() => setEstadoFilter("all")}
+                        title="Limpiar estado"
                       >
-                        {MEDIA_TYPE_LABELS[t]}
-                        {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
-                        {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
+                        <IconTrash2 className="filters-limpiar-icon" />
+                        Limpiar
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="crud-filters-block">
-                <div className="crud-filters-block-header">
-                  <h4 className="crud-filters-label">Generos</h4>
-                  {(generoFilters.length > 0 || generoExcludeFilters.length > 0) && (
+                    )}
+                  </div>
+
+                  <div className="crud-filters-chips">
                     <button
                       type="button"
-                      className="filters-inline-clear"
-                      onClick={() => {
-                        setGeneroFilters([]);
-                        setGeneroExcludeFilters([]);
-                      }}
-                      title="Limpiar generos"
-                    >
-                      <IconTrash2 className="filters-limpiar-icon" />
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="crud-filters-chips">
-                  {GENRE_OPTIONS.map((g) => {
-                    const mode = generoFilters.includes(g)
-                      ? "incluir"
-                      : generoExcludeFilters.includes(g)
-                        ? "excluir"
-                        : "off";
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => cycleGeneroFilter(g)}
-                        className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
-                      >
-                        {g}
-                        {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
-                        {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="crud-filters-block">
-                <div className="crud-filters-block-header">
-                  <h4 className="crud-filters-label">Estado</h4>
-                  {estadoFilter !== "all" && (
-                    <button
-                      type="button"
-                      className="filters-inline-clear"
                       onClick={() => setEstadoFilter("all")}
-                      title="Limpiar estado"
+                      className={`filter-type-btn ${
+                        estadoFilter === "all"
+                          ? "filter-type-btn-selected"
+                          : "filter-type-btn-unselected"
+                      }`}
                     >
-                      <IconTrash2 className="filters-limpiar-icon" />
-                      Limpiar
+                      Todos
                     </button>
-                  )}
-                </div>
-                <div className="crud-filters-chips">
-                  <button
-                    type="button"
-                    onClick={() => setEstadoFilter("all")}
-                    className={`filter-type-btn ${estadoFilter === "all" ? "filter-type-btn-selected" : "filter-type-btn-unselected"}`}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEstadoFilter("watched")}
-                    className={`filter-type-btn filter-type-btn-with-icon ${estadoFilter === "watched" ? "filter-type-btn-selected" : "filter-type-btn-unselected"}`}
-                  >
-                    <IconEye className="filter-type-icon" />
-                    Vistos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEstadoFilter("unwatched")}
-                    className={`filter-type-btn filter-type-btn-with-icon ${estadoFilter === "unwatched" ? "filter-type-btn-selected" : "filter-type-btn-unselected"}`}
-                  >
-                    <IconEyeOff className="filter-type-icon" />
-                    No vistos
-                  </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEstadoFilter("watched")}
+                      className={`filter-type-btn filter-type-btn-with-icon ${
+                        estadoFilter === "watched"
+                          ? "filter-type-btn-selected"
+                          : "filter-type-btn-unselected"
+                      }`}
+                    >
+                      <IconEye className="filter-type-icon" />
+                      Vistos
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEstadoFilter("unwatched")}
+                      className={`filter-type-btn filter-type-btn-with-icon ${
+                        estadoFilter === "unwatched"
+                          ? "filter-type-btn-selected"
+                          : "filter-type-btn-unselected"
+                      }`}
+                    >
+                      <IconEyeOff className="filter-type-icon" />
+                      No vistos
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        </div>
       </div>
 
-      {/* Content grid (flex-1 container py-6) */}
       <div className="crud-content">
         <button
           type="button"
           className="crud-fab-add"
-          onClick={() => { setCreating(true); setEditing(null); }}
+          onClick={() => {
+            setCreating(true);
+            setEditing(null);
+          }}
         >
           <IconPlus className="crud-fab-icon" />
           Agregar
         </button>
-        {/* Modal Agregar / Editar */}
+
         {showModal && (
-          <div className="add-edit-modal-overlay" onClick={() => { setCreating(false); setEditing(null); }}>
+          <div
+            className="add-edit-modal-overlay"
+            onClick={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
+          >
             <motion.div
               className="add-edit-modal"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
             >
               <div className="add-edit-modal-header">
                 <h2 className="add-edit-modal-title">
@@ -532,12 +670,16 @@ export default function Crud() {
                 <button
                   type="button"
                   className="add-edit-modal-close"
-                  onClick={() => { setCreating(false); setEditing(null); }}
+                  onClick={() => {
+                    setCreating(false);
+                    setEditing(null);
+                  }}
                   aria-label="Cerrar"
                 >
                   <IconX className="w-4 h-4" />
                 </button>
               </div>
+
               <div className="add-edit-modal-body">
                 <ItemForm
                   item={editing ?? undefined}
@@ -547,7 +689,10 @@ export default function Crud() {
                     setEditing(null);
                     queryClient.invalidateQueries({ queryKey: ["items"] });
                   }}
-                  onCancel={() => { setCreating(false); setEditing(null); }}
+                  onCancel={() => {
+                    setCreating(false);
+                    setEditing(null);
+                  }}
                 />
               </div>
             </motion.div>
@@ -557,8 +702,8 @@ export default function Crud() {
         <section className="crud-list">
           {isLoading ? (
             <div className="crud-grid manage-grid crud-skeleton">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="crud-card-skeleton">
+              {[1, 2, 3, 4, 5, 6].map((index) => (
+                <div key={index} className="crud-card-skeleton">
                   <div className="crud-card-skeleton-inner">
                     <div className="crud-card-skeleton-image" />
                     <div className="crud-card-skeleton-content">
@@ -582,11 +727,15 @@ export default function Crud() {
                   ? "Intenta ajustar los filtros o la búsqueda"
                   : "Agrega tu primer contenido para empezar"}
               </p>
+
               {!hasActiveFilters && !search.trim() && (
                 <button
                   type="button"
                   className="btn-agregar crud-empty-cta"
-                  onClick={() => { setCreating(true); setEditing(null); }}
+                  onClick={() => {
+                    setCreating(true);
+                    setEditing(null);
+                  }}
                 >
                   <IconPlus className="crud-empty-cta-icon" />
                   Agregar primer contenido
@@ -601,7 +750,10 @@ export default function Crud() {
                     item={item}
                     onEdit={setEditing}
                     onDelete={deleteMutation.mutate}
-                    onToggleWatched={(id) => { const it = items.find((i) => i.id === id); if (it) toggleVisto(it); }}
+                    onToggleWatched={(id) => {
+                      const currentItem = items.find((entry) => entry.id === id);
+                      if (currentItem) toggleVisto(currentItem);
+                    }}
                   />
                 </motion.li>
               ))}
