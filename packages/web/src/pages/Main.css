@@ -693,6 +693,34 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 1120px) {
+  .filters-switch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-status-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+
+  .filter-status-card .filter-switch-copy {
+    width: 100%;
+  }
+
+  .filter-status-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .filter-status-btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .filter-switch-control {
   position: relative;
   display: inline-flex;
@@ -1758,6 +1786,16 @@
     padding: 0.72rem 0.8rem;
   }
 
+  .filter-status-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+
+  .filter-status-card .filter-switch-copy {
+    width: 100%;
+  }
+
   .filter-status-buttons {
     width: 100%;
     justify-content: flex-start;
@@ -1839,10 +1877,13 @@
   .filter-status-buttons {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
   }
 
   .filter-status-btn {
     width: 100%;
+    min-width: 0;
+    padding-inline: 0.55rem;
   }
 
   .filters-accordion-trigger {
