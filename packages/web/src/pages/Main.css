@@ -928,6 +928,29 @@
   box-shadow: 0 0 0 3px rgb(0 114 143 / 0.12);
 }
 
+.title-filter-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.52rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: hsl(0 0% 100% / 0.06);
+  border: 1px solid hsl(0 0% 100% / 0.06);
+  border-radius: 999px;
+  transform: translateY(-50%);
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.title-filter-search-clear-icon {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
 .title-filter-selected,
 .title-filter-results {
   display: flex;
@@ -937,6 +960,7 @@
 
 .title-filter-selected-card,
 .title-filter-result-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1035,6 +1059,17 @@
   padding-inline: 0;
 }
 
+.title-filter-remove-btn-corner {
+  position: absolute;
+  top: 0.46rem;
+  right: 0.7rem;
+  min-width: 1.9rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  min-height: 1.9rem;
+  z-index: 2;
+}
+
 .title-filter-remove-icon,
 .title-filter-action-icon {
   width: 0.9rem;
@@ -1070,6 +1105,79 @@
   .title-filter-result-actions {
     width: 100%;
   }
+
+  .title-filter-selected-card {
+    padding-top: 2.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .filters-card-header {
+    gap: 0.55rem;
+  }
+
+  .filters-accordion-trigger {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .filters-accordion-meta {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .filters-inline-clear {
+    margin-left: auto;
+  }
+
+  .title-filter-selected-card,
+  .title-filter-result-card {
+    padding: 0.82rem 0.82rem 0.82rem;
+    border-radius: 0.92rem;
+  }
+
+  .title-filter-selected-card {
+    padding-top: 2.65rem;
+  }
+
+  .title-filter-selected-copy,
+  .title-filter-result-copy {
+    width: 100%;
+    padding-right: 2.2rem;
+  }
+
+  .title-filter-selected-title,
+  .title-filter-result-title {
+    font-size: 0.84rem;
+  }
+
+  .title-filter-selected-meta,
+  .title-filter-result-meta {
+    font-size: 0.72rem;
+  }
+
+  .title-filter-selected-actions,
+  .title-filter-result-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .title-filter-action {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .title-filter-action-icon {
+    width: 0.82rem;
+    height: 0.82rem;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1096,6 +1204,12 @@
     border-color: hsl(0 0% 100% / 0.12);
     background: hsl(0 0% 100% / 0.075);
     transform: translateY(-1px);
+  }
+
+  .title-filter-search-clear:hover {
+    color: #fff;
+    background: hsl(0 0% 100% / 0.1);
+    border-color: hsl(0 0% 100% / 0.1);
   }
 }
 
@@ -1892,9 +2006,20 @@
 
   .title-filter-search-input {
     min-height: 2.18rem;
-    padding: 0.46rem 0.74rem 0.46rem 2rem;
+    padding: 0.46rem 2.2rem 0.46rem 2rem;
     font-size: 0.84rem;
     border-radius: 0.72rem;
+  }
+
+  .title-filter-search-clear {
+    right: 0.42rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .title-filter-search-clear-icon {
+    width: 0.7rem;
+    height: 0.7rem;
   }
 
   .title-filter-result-actions {
@@ -1905,6 +2030,29 @@
 
   .title-filter-action {
     width: 100%;
+  }
+
+  .filters-accordion-meta {
+    gap: 0.38rem;
+  }
+
+  .filters-count-badge {
+    min-height: 1.55rem;
+    padding: 0.22rem 0.58rem;
+    font-size: 0.68rem;
+  }
+
+  .filters-inline-clear {
+    font-size: 0.72rem;
+  }
+
+  .title-filter-remove-btn-corner {
+    top: 0.42rem;
+    right: 0.58rem;
+    width: 1.7rem;
+    height: 1.7rem;
+    min-width: 1.7rem;
+    min-height: 1.7rem;
   }
 
   .main-content {

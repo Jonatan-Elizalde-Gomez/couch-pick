@@ -296,6 +296,16 @@ export default function Main() {
 
   const items = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
   const total = data?.pages[0]?.total ?? 0;
+  const visibleItems = useMemo(() => {
+    if (!appliedFilters.itemId?.length && !appliedFilters.itemIdExcluir?.length) return items;
+
+    return items.filter((item) => {
+      if (appliedFilters.itemId?.length && !appliedFilters.itemId.includes(item.id)) return false;
+      if (appliedFilters.itemIdExcluir?.length && appliedFilters.itemIdExcluir.includes(item.id)) return false;
+      return true;
+    });
+  }, [appliedFilters.itemId, appliedFilters.itemIdExcluir, items]);
+  const visibleTotal = visibleItems.length;
 
   const availableTags = useMemo(() => {
     const sourceItems = catalogItems.filter((item) => {
@@ -344,6 +354,8 @@ export default function Main() {
 
     return catalogItems
       .filter((item) => {
+        if (filters.itemId?.includes(item.id) || filters.itemIdExcluir?.includes(item.id)) return false;
+
         const matchesText =
           item.titulo.toLowerCase().includes(query) ||
           (item.tags ?? []).some((tag) => tag.toLowerCase().includes(query));
@@ -729,12 +741,24 @@ export default function Main() {
                 <div className="title-filter-search">
                   <IconSearch className="title-filter-search-icon" />
                   <input
-                    type="search"
+                    type="text"
                     className="title-filter-search-input"
                     placeholder="Busca un título o tag..."
                     value={titleSearch}
                     onChange={(event) => setTitleSearch(event.target.value)}
+                    autoComplete="off"
                   />
+                  {titleSearch.trim() && (
+                    <button
+                      type="button"
+                      className="title-filter-search-clear"
+                      onClick={() => setTitleSearch("")}
+                      aria-label="Limpiar búsqueda de títulos"
+                      title="Limpiar búsqueda"
+                    >
+                      <IconX className="title-filter-search-clear-icon" />
+                    </button>
+                  )}
                 </div>
 
                 {selectedTitleItems.length > 0 && (
@@ -748,6 +772,14 @@ export default function Main() {
 
                       return (
                         <div key={item.id} className={`title-filter-selected-card title-filter-selected-card-${mode}`}>
+                          <button
+                            type="button"
+                            className="title-filter-remove-btn title-filter-remove-btn-corner"
+                            onClick={() => setItemFilterMode(item.id, "off")}
+                            aria-label={`Quitar ${item.titulo} de la selección manual`}
+                          >
+                            <IconX className="title-filter-remove-icon" />
+                          </button>
                           <div className="title-filter-selected-copy">
                             <span className="title-filter-selected-title">{item.titulo}</span>
                             <span className="title-filter-selected-meta">
@@ -755,16 +787,21 @@ export default function Main() {
                             </span>
                           </div>
                           <div className="title-filter-selected-actions">
-                            <span className={`title-filter-mode-pill title-filter-mode-pill-${mode}`}>
-                              {mode === "incluir" ? "Solo sí" : "Excluir"}
-                            </span>
                             <button
                               type="button"
-                              className="title-filter-remove-btn"
-                              onClick={() => setItemFilterMode(item.id, "off")}
-                              aria-label={`Quitar ${item.titulo} de la selección manual`}
+                              className={`title-filter-action title-filter-action-include ${mode === "incluir" ? "title-filter-action-active" : ""}`}
+                              onClick={() => setItemFilterMode(item.id, mode === "incluir" ? "excluir" : "incluir")}
                             >
-                              <IconX className="title-filter-remove-icon" />
+                              <IconPlus className="title-filter-action-icon" />
+                              Incluir
+                            </button>
+                            <button
+                              type="button"
+                              className={`title-filter-action title-filter-action-exclude ${mode === "excluir" ? "title-filter-action-active" : ""}`}
+                              onClick={() => setItemFilterMode(item.id, mode === "excluir" ? "incluir" : "excluir")}
+                            >
+                              <IconX className="title-filter-action-icon" />
+                              Excluir
                             </button>
                           </div>
                         </div>
@@ -929,7 +966,7 @@ export default function Main() {
             type="button"
             className={`btn-shuffle-circle ${shufflePlaying ? "btn-shuffle-circle-active" : ""}`}
             onClick={runShuffle}
-            disabled={shufflePlaying || total < 2}
+            disabled={shufflePlaying || visibleTotal < 2}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -948,15 +985,19 @@ export default function Main() {
             </div>
           </motion.button>
           <p className="shuffle-item-count">
-            {total < 2
+            {visibleTotal < 2
               ? "Necesitas al menos 2 contenidos para shufflear"
-              : total === 1
+              : visibleTotal === 1
                 ? "1 contenido disponible"
-                : `${total} contenidos disponibles`}
+                : `${visibleTotal} contenidos disponibles`}
           </p>
           <p className="shuffle-caption">Deja que Couch Pick te saque de la indecisión.</p>
-          {total === 0 && !isLoading && (
-            <p className="shuffle-hint">Añade contenido en Gestionar para usar el shuffle.</p>
+          {visibleTotal === 0 && !isLoading && (
+            <p className="shuffle-hint">
+              {total === 0
+                ? "Añade contenido en Gestionar para usar el shuffle."
+                : "No hay títulos visibles con los filtros actuales."}
+            </p>
           )}
         </section>
 
@@ -965,7 +1006,7 @@ export default function Main() {
             <ShuffleAnimation
               key={shuffleWinner.id}
               item={shuffleWinner}
-              items={items}
+              items={visibleItems}
               onClose={() => setShuffleWinner(null)}
               onAdvanceStatus={async () => {
                 await updateItem(shuffleWinner.id, { estado: getNextWatchStatus(shuffleWinner.estado) });
@@ -996,7 +1037,7 @@ export default function Main() {
               <h2 className="section-title">Contenidos disponibles</h2>
               <p className="section-subtitle">Desliza para explorar tu colección y abre cualquier card para ver más detalle.</p>
             </div>
-            {items.length > 0 && total > 0 && (
+            {visibleItems.length > 0 && visibleTotal > 0 && (
               <div className="cards-nav" aria-label="Navegación del carrusel">
                 <button
                   type="button"
@@ -1029,7 +1070,7 @@ export default function Main() {
               <div className="cards-scroll-gradient cards-scroll-gradient-right" aria-hidden />
               <div ref={carouselScrollRef} className="cards-scroll-wrap" role="region" aria-label="Carrusel de contenidos">
                 <motion.ul className="cards-grid-h" layout>
-                  {items.map((it) => (
+                  {visibleItems.map((it) => (
                     <motion.li
                       key={it.id}
                       layout
@@ -1060,8 +1101,10 @@ export default function Main() {
               </div>
             </div>
           )}
-          {!isLoading && total === 0 && (
-            <p className="empty-state">No hay contenido. <Link to="/app/crud">Añadir en Gestionar</Link></p>
+          {!isLoading && visibleTotal === 0 && (
+            <p className="empty-state">
+              {total === 0 ? <>No hay contenido. <Link to="/app/crud">Añadir en Gestionar</Link></> : "No hay contenidos visibles con los filtros actuales."}
+            </p>
           )}
         </section>
       </main>

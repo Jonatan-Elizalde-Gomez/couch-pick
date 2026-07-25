@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Item } from "../api/items";
 import { getNextWatchStatus } from "../api/items";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
-import { IconX, IconSparkles, IconEye, IconEyeOff, IconCircleDot, IconExternalLink } from "./icons";
+import { IconX, IconEye, IconEyeOff, IconCircleDot, IconExternalLink } from "./icons";
 import "./ShuffleAnimation.css";
 
 const CONFETTI_COLORS = [
@@ -320,9 +320,7 @@ export default function ShuffleAnimation({
               </button>
 
               <header className="shuffle-winner-header">
-                <div className="shuffle-winner-icon-wrap">
-                  <IconSparkles className="shuffle-winner-icon" />
-                </div>
+                <img src="/couch-pick-logo-blanco.svg" alt="" className="shuffle-winner-logo" />
                 <h2 className="shuffle-winner-title">Tu elección es...</h2>
               </header>
 

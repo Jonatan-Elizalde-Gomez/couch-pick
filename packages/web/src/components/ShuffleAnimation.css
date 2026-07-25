@@ -212,28 +212,19 @@
   border-bottom: 1px solid hsl(142 71% 40% / 0.14);
 }
 
-.shuffle-winner-icon-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
-  background: hsl(142 71% 40% / 0.2);
-  border: 2px solid hsl(142 71% 40% / 0.4);
-  margin-bottom: 0.75rem;
-  animation: shuffle-bounce 0.6s ease;
-}
-
 @keyframes shuffle-bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
 }
 
-.shuffle-winner-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--accent);
+.shuffle-winner-logo {
+  display: block;
+  width: auto;
+  height: 4rem;
+  margin: 0 auto 0.8rem;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.24));
+  animation: shuffle-bounce 0.6s ease;
 }
 
 .shuffle-winner-title {
