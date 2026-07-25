@@ -30,7 +30,22 @@ export const itemGeneros = sqliteTable("item_generos", {
   genero: text("genero").notNull(),
 });
 
+export const userFilterPreferences = sqliteTable("user_filter_preferences", {
+  email: text("email").primaryKey(),
+  autoApply: integer("auto_apply", { mode: "boolean" }).notNull().default(true),
+  soloNoVistos: integer("solo_no_vistos", { mode: "boolean" }).notNull().default(true),
+  tipo: text("tipo").notNull().default("[]"),
+  tipoExcluir: text("tipo_excluir").notNull().default("[]"),
+  genero: text("genero").notNull().default("[]"),
+  generoExcluir: text("genero_excluir").notNull().default("[]"),
+  tag: text("tag").notNull().default("[]"),
+  tagExcluir: text("tag_excluir").notNull().default("[]"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
 export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
+export type UserFilterPreferences = typeof userFilterPreferences.$inferSelect;

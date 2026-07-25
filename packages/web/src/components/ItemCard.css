@@ -2,7 +2,7 @@
   width: 100%;
   min-width: 0;
   background: var(--bg-card);
-  border-radius: var(--radius);
+  border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -19,6 +19,7 @@
   aspect-ratio: 2/3;
   background: var(--bg-elevated);
   overflow: hidden;
+  border-radius: 1.25rem 1.25rem 0 0;
 }
 
 .item-card-poster-inner {
@@ -114,7 +115,7 @@
 }
 
 .item-card-eye-wrap.no-visto {
-  background: rgba(0, 0, 0, 0.4);
+  background: #000;
 }
 
 .item-card-eye-icon {
@@ -144,7 +145,7 @@
 }
 
 .item-card-body {
-  padding: 0.75rem;
+  padding: 0.85rem 0.85rem 0.95rem;
 }
 
 .item-card-title {
@@ -159,20 +160,97 @@
   overflow: hidden;
 }
 
-.item-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+.item-card-title-single-line {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
 }
 
-.item-card-tags .tag {
+.item-card-meta {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.item-card-meta-measure {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.item-card-genre {
   font-size: 0.7rem;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  font-weight: 600;
+  color: hsl(142 71% 58%);
+  background: hsl(142 35% 16% / 0.9);
+  padding: 0.18rem 0.48rem;
+  border-radius: 999px;
+  border: 1px solid hsl(142 45% 24% / 0.9);
   max-width: 7.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .item-card {
+    border-radius: 1rem;
+  }
+
+  .item-card-tipo {
+    top: 0.45rem;
+    left: 0.45rem;
+    padding: 0.22rem 0.45rem;
+    font-size: 0.64rem;
+  }
+
+  .item-card-eye-wrap {
+    top: 0.45rem;
+    right: 0.45rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .item-card-body {
+    padding: 0.65rem;
+  }
+
+  .item-card-title {
+    margin-bottom: 0.3rem;
+    font-size: 0.86rem;
+    line-height: 1.25;
+  }
+
+  .item-card-genre {
+    max-width: 6.25rem;
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .item-card-title {
+    font-size: 0.82rem;
+  }
+
+  .item-card-meta {
+    gap: 0.3rem;
+  }
+
+  .item-card-meta-measure {
+    gap: 0.3rem;
+  }
+
+  .item-card-genre {
+    padding: 0.12rem 0.35rem;
+    max-width: 5.75rem;
+    font-size: 0.62rem;
+  }
 }

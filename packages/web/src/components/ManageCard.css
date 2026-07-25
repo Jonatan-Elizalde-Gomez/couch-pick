@@ -3,12 +3,19 @@
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--bg-card);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 10px 24px hsl(0 0% 0% / 0.22);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
-.manage-card:hover {
-  border-color: hsl(142 71% 40% / 0.4);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+@media (hover: hover) and (pointer: fine) {
+  .manage-card:hover {
+    border-color: rgb(0 114 143 / 0.48);
+    box-shadow:
+      0 12px 26px hsl(0 0% 0% / 0.22),
+      0 0 0 1px rgb(0 114 143 / 0.12),
+      0 0 16px rgb(0 114 143 / 0.16);
+    transform: translateY(-1px);
+  }
 }
 
 .manage-card-watched {

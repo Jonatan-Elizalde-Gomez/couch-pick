@@ -29,7 +29,7 @@ export const auth = new Hono<{ Bindings: Env }>()
       return c.json({ error: "Credenciales incorrectas" }, 401);
     }
 
-    const token = await createSession(c);
+    const token = await createSession(c, email);
     const expiresAt = getSessionExpiryDate();
     return c.json(
       { ok: true, session: token, expiresAt },

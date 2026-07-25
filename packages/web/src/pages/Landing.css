@@ -30,7 +30,7 @@
   left: 2.5rem;
   width: 18rem;
   height: 18rem;
-  background: hsl(142 71% 40% / 0.05);
+  background: rgb(0 114 143 / 0.08);
 }
 
 .landing-bg-blur-2 {
@@ -38,7 +38,7 @@
   right: 2.5rem;
   width: 24rem;
   height: 24rem;
-  background: hsl(142 71% 40% / 0.03);
+  background: rgb(0 114 143 / 0.05);
 }
 
 /* Floating icons (Film, Tv, Play, Sparkles) con animate-pulse */
@@ -51,7 +51,7 @@
 
 .landing-float-icon {
   position: absolute;
-  color: hsl(142 71% 40% / 0.2);
+  color: rgb(0 114 143 / 0.22);
   animation: landing-pulse 2s ease-in-out infinite;
 }
 
@@ -75,7 +75,7 @@
   left: 33%;
   width: 2.5rem;
   height: 2.5rem;
-  color: hsl(142 71% 40% / 0.1);
+  color: rgb(0 114 143 / 0.14);
   animation-delay: 0.5s;
 }
 
@@ -106,22 +106,12 @@
   margin-bottom: 2rem;
 }
 
-.landing-logo-box {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.landing-logo-image {
+  display: block;
   width: 4rem;
   height: 4rem;
-  border-radius: 1rem;
-  background: hsl(142 71% 40% / 0.1);
-  border: 1px solid hsl(142 71% 40% / 0.2);
-  margin-bottom: 1rem;
-}
-
-.landing-logo-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--accent);
+  margin: 0 auto 1rem;
+  object-fit: contain;
 }
 
 .landing-app-name {
@@ -239,8 +229,8 @@
   padding: 0.625rem 1rem;
   font-size: 1rem;
   font-weight: 500;
-  color: hsl(0 0% 10%);
-  background: var(--accent);
+  color: #fff;
+  background: linear-gradient(180deg, rgb(0 114 143 / 0.96), rgb(0 114 143 / 0.82));
   border: none;
   border-radius: var(--radius-sm);
   transition: background 0.2s, transform 0.1s;
@@ -248,7 +238,7 @@
 }
 
 .btn-ingresar:hover:not(:disabled) {
-  background: hsl(142 71% 36%);
+  background: linear-gradient(180deg, rgb(0 114 143 / 1), rgb(0 114 143 / 0.88));
 }
 
 .btn-ingresar:active:not(:disabled) {
@@ -270,8 +260,8 @@
 .landing-spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid hsl(0 0% 10% / 0.3);
-  border-top-color: hsl(0 0% 10%);
+  border: 2px solid hsl(0 0% 100% / 0.3);
+  border-top-color: hsl(0 0% 100%);
   border-radius: 50%;
   animation: landing-spin 0.8s linear infinite;
 }

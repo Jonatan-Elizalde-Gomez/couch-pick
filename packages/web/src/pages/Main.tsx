@@ -1,26 +1,30 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+﻿import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getItemsPaginated, shuffle, updateItem, type Item, type ItemTipo, type ShuffleFilters } from "../api/items";
+import { getItems, getItemsPaginated, shuffle, updateItem, type Item, type ItemTipo, type ShuffleFilters } from "../api/items";
+import { getFilterPreferences, saveFilterPreferences } from "../api/preferences";
 import { MEDIA_TYPE_LABELS } from "../lib/constants";
 import {
   IconFilm,
   IconTv,
   IconPlay,
   IconYoutube,
-  IconX,
+  IconTrash2,
   IconSettings,
+  IconFilter,
   IconChevronUp,
   IconChevronDown,
-  IconSparkles,
   IconShuffle,
   IconLogOut,
+  IconArrowLeft,
+  IconArrowRight,
 } from "../components/icons";
 import ItemCard from "../components/ItemCard";
 import ItemDetailModal from "../components/ItemDetailModal";
 import ShuffleAnimation from "../components/ShuffleAnimation";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { GENRE_OPTIONS } from "../lib/constants";
 import "./Main.css";
 
@@ -33,8 +37,6 @@ const SCROLL_LOAD_THRESHOLD = 400;
 
 const TIPOS: ItemTipo[] = ["movie", "series", "anime", "youtube"];
 const TYPE_ICONS = { movie: IconFilm, series: IconTv, anime: IconPlay, youtube: IconYoutube };
-const AUTO_APPLY_STORAGE_KEY = "couchpick-auto-apply-filters";
-
 const emptyFilters: ShuffleFilters = {
   tipo: [],
   tipoExcluir: [],
@@ -42,6 +44,7 @@ const emptyFilters: ShuffleFilters = {
   generoExcluir: [],
   tag: [],
   tagExcluir: [],
+  soloNoVistos: true,
 };
 
 function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
@@ -56,33 +59,86 @@ function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
   );
 }
 
+function includesAny(values: string[] | undefined, selected: string[] | undefined): boolean {
+  if (!selected?.length) return true;
+  if (!values?.length) return false;
+  return selected.some((value) => values.includes(value));
+}
+
+function excludesAll(values: string[] | undefined, excluded: string[] | undefined): boolean {
+  if (!excluded?.length) return true;
+  if (!values?.length) return true;
+  return excluded.every((value) => !values.includes(value));
+}
+
 export default function Main() {
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const [autoApply, setAutoApply] = useState(() => {
-    try {
-      return localStorage.getItem(AUTO_APPLY_STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [autoApply, setAutoApply] = useState(true);
   const [filters, setFilters] = useState<ShuffleFilters>({ ...emptyFilters });
   const [appliedFilters, setAppliedFilters] = useState<ShuffleFilters>({ ...emptyFilters });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [shuffleWinner, setShuffleWinner] = useState<Item | null>(null);
   const [shufflePlaying, setShufflePlaying] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [openFilterSections, setOpenFilterSections] = useState({
+    tipo: true,
+    genero: false,
+    tag: false,
+  });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const carouselScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(AUTO_APPLY_STORAGE_KEY, String(autoApply));
-    } catch {}
-  }, [autoApply]);
+    let active = true;
+
+    async function loadPreferences() {
+      if (!isAuthenticated) return;
+      try {
+        const { preferences } = await getFilterPreferences();
+        if (!active) return;
+        setAutoApply(preferences.autoApply);
+        setFilters((current) => ({
+          ...current,
+          soloNoVistos: preferences.soloNoVistos || undefined,
+        }));
+        setAppliedFilters((current) => ({
+          ...current,
+          soloNoVistos: preferences.soloNoVistos || undefined,
+        }));
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (active) setPreferencesLoaded(true);
+      }
+    }
+
+    void loadPreferences();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (autoApply) setAppliedFilters({ ...filters });
   }, [autoApply, filters]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !preferencesLoaded) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void saveFilterPreferences({
+        autoApply,
+        soloNoVistos: !!filters.soloNoVistos,
+      }).catch((error) => {
+        console.error(error);
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [autoApply, filters.soloNoVistos, isAuthenticated, preferencesLoaded]);
 
   const filtersForApi = useMemo(() => ({
     ...(appliedFilters.tipo?.length ? { tipo: appliedFilters.tipo } : {}),
@@ -125,9 +181,23 @@ export default function Main() {
     });
   };
   const clearAllFilters = () => {
+    setAutoApply(true);
     setFilters({ ...emptyFilters });
+    setAppliedFilters({ ...emptyFilters });
   };
-  const hasAnyFilter = (filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0) + (filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0) + (filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0) > 0;
+  const activeFilterCount =
+    (filters.tipo?.length ?? 0) +
+    (filters.tipoExcluir?.length ?? 0) +
+    (filters.genero?.length ?? 0) +
+    (filters.generoExcluir?.length ?? 0) +
+    (filters.tag?.length ?? 0) +
+    (filters.tagExcluir?.length ?? 0);
+  const tipoActiveCount = (filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0);
+  const generoActiveCount = (filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0);
+  const tagActiveCount = (filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0);
+  const toggleFilterSection = (section: "tipo" | "genero" | "tag") => {
+    setOpenFilterSections((current) => ({ ...current, [section]: !current[section] }));
+  };
 
   const {
     data,
@@ -142,13 +212,45 @@ export default function Main() {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
   });
 
+  const { data: catalogItems = [] } = useQuery({
+    queryKey: ["items", "catalog", isAuthenticated],
+    queryFn: () => getItems(),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+
   const items = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
   const total = data?.pages[0]?.total ?? 0;
 
-  const availableTags = useMemo(
-    () => [...new Set(items.flatMap((i) => i.tags ?? []))],
-    [items]
-  );
+  const availableTags = useMemo(() => {
+    const sourceItems = catalogItems.filter((item) => {
+      if (filters.soloNoVistos && item.visto) return false;
+      if (filters.tipo?.length && !filters.tipo.includes(item.tipo)) return false;
+      if (filters.tipoExcluir?.length && filters.tipoExcluir.includes(item.tipo)) return false;
+      if (!includesAny(item.generos, filters.genero)) return false;
+      if (!excludesAll(item.generos, filters.generoExcluir)) return false;
+      return true;
+    });
+
+    const selectedTags = new Set([...(filters.tag ?? []), ...(filters.tagExcluir ?? [])]);
+    const orderedTags = [...new Set(sourceItems.flatMap((item) => item.tags ?? []))];
+
+    return orderedTags.sort((a, b) => {
+      const aSelected = selectedTags.has(a) ? 1 : 0;
+      const bSelected = selectedTags.has(b) ? 1 : 0;
+      if (aSelected !== bSelected) return bSelected - aSelected;
+      return a.localeCompare(b, "es", { sensitivity: "base" });
+    });
+  }, [
+    catalogItems,
+    filters.genero,
+    filters.generoExcluir,
+    filters.soloNoVistos,
+    filters.tag,
+    filters.tagExcluir,
+    filters.tipo,
+    filters.tipoExcluir,
+  ]);
 
   const onScroll = useCallback(() => {
     const el = carouselScrollRef.current;
@@ -192,9 +294,13 @@ export default function Main() {
       <header className="main-header">
         <div className="main-header-left">
           <div className="main-logo-box">
-            <IconSparkles className="main-logo-icon" />
+            <img
+              src="/couch-pick-logo-blanco.svg"
+              alt="Couch Pick"
+              className="main-logo-image"
+            />
           </div>
-          <div>
+          <div className="main-brand-copy">
             <h1 className="main-app-name">Couch Pick</h1>
             <p className="main-item-count">{total === 1 ? "1 contenido" : `${total} contenidos`}</p>
           </div>
@@ -206,7 +312,7 @@ export default function Main() {
             onClick={() => setFiltersOpen((o) => !o)}
             aria-expanded={filtersOpen}
           >
-            <IconSettings className="nav-btn-icon" />
+            <IconFilter className="nav-btn-icon" />
             Filtros
             {filtersOpen ? (
               <IconChevronUp className="nav-chevron" />
@@ -215,28 +321,46 @@ export default function Main() {
             )}
           </button>
           <Link to="/app/crud" className="nav-btn nav-btn-gestionar">
+            <IconSettings className="nav-btn-icon" />
             Gestionar
           </Link>
-          <button type="button" className="btn-ghost btn-ghost-icon" onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
-            <IconLogOut className="nav-btn-icon" />
-          </button>
         </nav>
+        <button
+          type="button"
+          className="btn-ghost btn-ghost-icon nav-btn-logout"
+          onClick={() => setLogoutDialogOpen(true)}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <IconLogOut className="nav-btn-icon" />
+        </button>
       </header>
 
-      {/* Panel de filtros avanzados: Incluir (OR) / Excluir por categoría */}
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        title="Cerrar sesión"
+        description="Vas a salir de tu cuenta actual en Couch Pick."
+        confirmLabel="Sí, cerrar sesión"
+        tone="danger"
+        onCancel={() => setLogoutDialogOpen(false)}
+        onConfirm={async () => {
+          setLogoutDialogOpen(false);
+          await logout();
+        }}
+      />
+
+      {/* Panel de filtros avanzados: incluir/excluir por categoría */}
       <div
         className={`main-filters-wrap ${filtersOpen ? "main-filters-wrap-open" : ""}`}
       >
         <form className="filters-panel" onSubmit={(e) => e.preventDefault()} aria-label="Filtros de contenido">
-          <div className="filters-panel-block filters-panel-block-inline">
-            <label className="filter-check">
-              <input
-                type="checkbox"
-                checked={autoApply}
-                onChange={(e) => setAutoApply(e.target.checked)}
-              />
-              Búsqueda automática
-            </label>
+          <div className="filters-topbar">
+            <div className="filters-topbar-copy">
+              <h2 className="filters-main-title">Afina tu shuffle</h2>
+              <p className="filters-main-subtitle">
+                Ajusta lo que quieres incluir o excluir para que la recomendación se sienta mucho más precisa.
+              </p>
+            </div>
             {!autoApply && hasPendingFilters && (
               <button type="button" className="btn-aplicar-filtros" onClick={applyFilters}>
                 Aplicar filtros
@@ -244,147 +368,285 @@ export default function Main() {
             )}
           </div>
 
-          <div className="filters-panel-block">
-            <div className="filters-panel-header">
-              <h3 className="filters-panel-title">Tipo</h3>
-              {((filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0)) > 0 && (
-                <button
-                  type="button"
-                  className="filters-limpiar"
-                  onClick={() => setFilters((f) => ({ ...f, tipo: [], tipoExcluir: [] }))}
-                  title="Limpiar tipo"
-                >
-                  <IconX className="filters-limpiar-icon" />
-                  Limpiar
-                </button>
-              )}
-            </div>
-            <div className="filters-type-wrap">
-              {TIPOS.map((t) => {
-                const Icon = TYPE_ICONS[t];
-                const mode = filters.tipo?.includes(t) ? "incluir" : filters.tipoExcluir?.includes(t) ? "excluir" : "off";
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => cycleTipo(t)}
-                    className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
-                    title={mode === "incluir" ? "Incluir: mostrar solo este tipo" : mode === "excluir" ? "Excluir: no mostrar este tipo" : "Clic para incluir"}
-                  >
-                    <Icon className="filter-type-icon" />
-                    <span>{MEDIA_TYPE_LABELS[t]}</span>
-                    {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
-                    {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="filters-switch-grid">
+            <label className={`filter-switch-card ${autoApply ? "filter-switch-card-on" : ""}`}>
+              <span className="filter-switch-copy">
+                <span className="filter-switch-title">Búsqueda automática</span>
+                <span className="filter-switch-description">Aplica los cambios al momento mientras ajustas filtros.</span>
+              </span>
+              <span className="filter-switch-control">
+                <input
+                  type="checkbox"
+                  className="filter-switch-input"
+                  checked={autoApply}
+                  onChange={(e) => setAutoApply(e.target.checked)}
+                />
+                <span className="filter-switch-track" aria-hidden>
+                  <span className="filter-switch-thumb" />
+                </span>
+              </span>
+            </label>
+
+            <label className={`filter-switch-card ${(filters.soloNoVistos ?? false) ? "filter-switch-card-on" : ""}`}>
+              <span className="filter-switch-copy">
+                <span className="filter-switch-title">Solo no vistos</span>
+                <span className="filter-switch-description">Oculta lo ya visto para que el shuffle priorice contenido pendiente.</span>
+              </span>
+              <span className="filter-switch-control">
+                <input
+                  type="checkbox"
+                  className="filter-switch-input"
+                  checked={filters.soloNoVistos ?? false}
+                  onChange={(e) => setFilters((f) => ({ ...f, soloNoVistos: e.target.checked || undefined }))}
+                />
+                <span className="filter-switch-track" aria-hidden>
+                  <span className="filter-switch-thumb" />
+                </span>
+              </span>
+            </label>
           </div>
 
-          <div className="filters-panel-block">
-            <div className="filters-panel-header">
-              <h3 className="filters-panel-title">Géneros</h3>
-              {((filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0)) > 0 && (
-                <button
-                  type="button"
-                  className="filters-limpiar"
-                  onClick={() => setFilters((f) => ({ ...f, genero: [], generoExcluir: [] }))}
-                  title="Limpiar géneros"
-                >
-                  <IconX className="filters-limpiar-icon" />
-                  Limpiar
-                </button>
-              )}
+          <div className="filters-legend">
+            <span className="filters-legend-label">Estados:</span>
+            <span className="filters-legend-chip filters-legend-chip-off">Sin filtro</span>
+            <span className="filters-legend-chip filters-legend-chip-incluir">Incluir</span>
+            <span className="filters-legend-chip filters-legend-chip-excluir">Excluir</span>
+          </div>
+          <p className="filters-guide-text">
+            Toca un chip varias veces para alternar entre incluir, excluir y desactivar. Usa los acordeones para mantener el panel compacto.
+          </p>
+
+          <div className="filters-panel-block filters-panel-card">
+            <div className="filters-card-header">
+              <button
+                type="button"
+                className="filters-accordion-trigger"
+                onClick={() => toggleFilterSection("tipo")}
+                aria-expanded={openFilterSections.tipo}
+              >
+                <div className="filters-accordion-copy">
+                  <span className="filters-panel-title">Tipo</span>
+                  <span className="filters-panel-hint">Define qué formatos entran o quedan fuera del shuffle.</span>
+                </div>
+                <div className="filters-accordion-meta">
+                  {tipoActiveCount > 0 && (
+                    <span className="filters-count-badge">
+                      {tipoActiveCount} activo{tipoActiveCount === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {tipoActiveCount > 0 && (
+                    <button
+                      type="button"
+                      className="filters-inline-clear"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilters((f) => ({ ...f, tipo: [], tipoExcluir: [] }));
+                      }}
+                      aria-label="Limpiar filtro de tipo"
+                      title="Limpiar tipo"
+                    >
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
+                    </button>
+                  )}
+                  {openFilterSections.tipo ? <IconChevronUp className="filters-accordion-icon" /> : <IconChevronDown className="filters-accordion-icon" />}
+                </div>
+              </button>
             </div>
-            <div className="filters-type-wrap">
-              {GENRE_OPTIONS.map((g) => {
-                const mode = filters.genero?.includes(g) ? "incluir" : filters.generoExcluir?.includes(g) ? "excluir" : "off";
-                return (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => cycleGenero(g)}
-                    className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
-                    title={mode === "incluir" ? "Incluir: al menos uno" : mode === "excluir" ? "Excluir: ninguno" : "Clic para incluir"}
-                  >
-                    <span>{g}</span>
-                    {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
-                    {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
-                  </button>
-                );
-              })}
+            {openFilterSections.tipo && (
+              <>
+                <div className="filters-type-wrap">
+                  {TIPOS.map((t) => {
+                    const Icon = TYPE_ICONS[t];
+                    const mode = filters.tipo?.includes(t) ? "incluir" : filters.tipoExcluir?.includes(t) ? "excluir" : "off";
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => cycleTipo(t)}
+                        className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
+                        title={mode === "incluir" ? "Incluir: mostrar solo este tipo" : mode === "excluir" ? "Excluir: no mostrar este tipo" : "Clic para incluir"}
+                      >
+                        <Icon className="filter-type-icon" />
+                        <span>{MEDIA_TYPE_LABELS[t]}</span>
+                        {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
+                        {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="filters-panel-block filters-panel-card">
+            <div className="filters-card-header">
+              <button
+                type="button"
+                className="filters-accordion-trigger"
+                onClick={() => toggleFilterSection("genero")}
+                aria-expanded={openFilterSections.genero}
+              >
+                <div className="filters-accordion-copy">
+                  <span className="filters-panel-title">Géneros</span>
+                  <span className="filters-panel-hint">Dile al shuffle el mood o estilo exacto que estás buscando.</span>
+                </div>
+                <div className="filters-accordion-meta">
+                  {generoActiveCount > 0 && (
+                    <span className="filters-count-badge">
+                      {generoActiveCount} activo{generoActiveCount === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {generoActiveCount > 0 && (
+                    <button
+                      type="button"
+                      className="filters-inline-clear"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilters((f) => ({ ...f, genero: [], generoExcluir: [] }));
+                      }}
+                      aria-label="Limpiar filtro de géneros"
+                      title="Limpiar géneros"
+                    >
+                      <IconTrash2 className="filters-limpiar-icon" />
+                      Limpiar
+                    </button>
+                  )}
+                  {openFilterSections.genero ? <IconChevronUp className="filters-accordion-icon" /> : <IconChevronDown className="filters-accordion-icon" />}
+                </div>
+              </button>
             </div>
+            {openFilterSections.genero && (
+              <>
+                <div className="filters-type-wrap">
+                  {GENRE_OPTIONS.map((g) => {
+                    const mode = filters.genero?.includes(g) ? "incluir" : filters.generoExcluir?.includes(g) ? "excluir" : "off";
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => cycleGenero(g)}
+                        className={`filter-type-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
+                        title={mode === "incluir" ? "Incluir: al menos uno" : mode === "excluir" ? "Excluir: ninguno" : "Clic para incluir"}
+                      >
+                        <span>{g}</span>
+                        {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">Incluir</span>}
+                        {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           {availableTags.length > 0 && (
-            <div className="filters-panel-block">
-              <div className="filters-panel-header">
-                <h3 className="filters-panel-title">Tags</h3>
-                {((filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0)) > 0 && (
-                  <button
-                    type="button"
-                    className="filters-limpiar"
-                    onClick={() => setFilters((f) => ({ ...f, tag: [], tagExcluir: [] }))}
-                    title="Limpiar tags"
-                  >
-                    <IconX className="filters-limpiar-icon" />
-                    Limpiar
-                  </button>
-                )}
+            <div className="filters-panel-block filters-panel-card">
+              <div className="filters-card-header">
+                <button
+                  type="button"
+                  className="filters-accordion-trigger"
+                  onClick={() => toggleFilterSection("tag")}
+                  aria-expanded={openFilterSections.tag}
+                >
+                  <div className="filters-accordion-copy">
+                    <span className="filters-panel-title">Tags</span>
+                    <span className="filters-panel-hint">Refina por saga, año, nota o cualquier detalle que hayas guardado.</span>
+                  </div>
+                  <div className="filters-accordion-meta">
+                    {tagActiveCount > 0 && (
+                      <span className="filters-count-badge">
+                        {tagActiveCount} activo{tagActiveCount === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {tagActiveCount > 0 && (
+                      <button
+                        type="button"
+                        className="filters-inline-clear"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilters((f) => ({ ...f, tag: [], tagExcluir: [] }));
+                        }}
+                        aria-label="Limpiar filtro de tags"
+                        title="Limpiar tags"
+                      >
+                        <IconTrash2 className="filters-limpiar-icon" />
+                        Limpiar
+                      </button>
+                    )}
+                    {openFilterSections.tag ? <IconChevronUp className="filters-accordion-icon" /> : <IconChevronDown className="filters-accordion-icon" />}
+                  </div>
+                </button>
               </div>
-              <div className="filters-type-wrap filters-tags-wrap">
-                {availableTags.slice(0, 14).map((tag) => {
-                  const mode = filters.tag?.includes(tag) ? "incluir" : filters.tagExcluir?.includes(tag) ? "excluir" : "off";
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => cycleTag(tag)}
-                      className={`filter-type-btn filter-tag-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
-                      title={mode === "incluir" ? "Incluir" : mode === "excluir" ? "Excluir" : "Clic para incluir"}
-                    >
-                      #{tag}
-                      {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">+</span>}
-                      {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">−</span>}
-                    </button>
-                  );
-                })}
-              </div>
+              {openFilterSections.tag && (
+                <>
+                  <div className="filters-type-wrap filters-tags-wrap">
+                    {availableTags.slice(0, 14).map((tag) => {
+                      const mode = filters.tag?.includes(tag) ? "incluir" : filters.tagExcluir?.includes(tag) ? "excluir" : "off";
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => cycleTag(tag)}
+                          className={`filter-type-btn filter-tag-btn filter-chip filter-chip-${mode} ${mode === "off" ? "filter-type-btn-unselected" : ""}`}
+                          title={mode === "incluir" ? "Incluir" : mode === "excluir" ? "Excluir" : "Clic para incluir"}
+                        >
+                          #{tag}
+                          {mode === "incluir" && <span className="filter-chip-badge filter-chip-badge-incluir">+</span>}
+                          {mode === "excluir" && <span className="filter-chip-badge filter-chip-badge-excluir">Excluir</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          <div className="filters-panel-block filters-panel-block-inline filters-panel-footer">
-            <label className="filter-check">
-              <input
-                type="checkbox"
-                checked={filters.soloNoVistos ?? false}
-                onChange={(e) => setFilters((f) => ({ ...f, soloNoVistos: e.target.checked || undefined }))}
-              />
-              Solo no vistos
-            </label>
-            {filters.soloNoVistos && (
-              <button
-                type="button"
-                className="filters-limpiar"
-                onClick={() => setFilters((f) => ({ ...f, soloNoVistos: undefined }))}
-                title="Quitar solo no vistos"
-              >
-                <IconX className="filters-limpiar-icon" />
-                Limpiar
+          <div className="filters-panel-block filters-panel-footer">
+            <div className="filters-summary-card">
+              <div className="filters-summary-badge">
+                {activeFilterCount > 0 ? `${activeFilterCount} filtro${activeFilterCount === 1 ? "" : "s"}` : "Shuffle libre"}
+              </div>
+              <div className="filters-footer-copy">
+                <span className="filters-footer-title">
+                  {activeFilterCount > 0 ? "Tu shuffle ya tiene dirección" : "Tu shuffle está abierto a todo"}
+                </span>
+                <span className="filters-footer-description">
+                  {activeFilterCount > 0
+                    ? "La próxima recomendación respetará tus preferencias activas."
+                    : "No hay restricciones aplicadas, así que cualquier contenido de tu catálogo puede aparecer."}
+                </span>
+              </div>
+              {activeFilterCount > 0 && (
+                <button type="button" className="filters-action-pill filters-action-pill-danger" onClick={clearAllFilters} title="Limpiar todos los filtros">
+                  <IconShuffle className="filters-limpiar-icon" />
+                  Reiniciar filtros
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="filters-mobile-actions">
+            {!autoApply && hasPendingFilters && (
+              <button type="button" className="btn-aplicar-filtros filters-mobile-apply" onClick={applyFilters}>
+                Aplicar filtros
               </button>
             )}
-            {hasAnyFilter && (
-              <button type="button" className="filters-limpiar filters-limpiar-todo" onClick={clearAllFilters} title="Limpiar todos los filtros">
-                <IconX className="filters-limpiar-icon" />
-                Limpiar todo
-              </button>
-            )}
+            <button
+              type="button"
+              className="filters-mobile-close"
+              onClick={() => setFiltersOpen(false)}
+            >
+              Cerrar filtros
+            </button>
           </div>
         </form>
       </div>
 
       <main className="main-content">
         <section className="shuffle-cta">
+          <p className="shuffle-kicker">QUE VEMOS ESTA NOCHE?</p>
           <motion.button
             type="button"
             className={`btn-shuffle-circle ${shufflePlaying ? "btn-shuffle-circle-active" : ""}`}
@@ -397,7 +659,11 @@ export default function Main() {
               <span className="btn-shuffle-ring" aria-hidden />
             )}
             <div className="btn-shuffle-inner">
-              <IconShuffle className={`shuffle-icon-svg ${shufflePlaying ? "shuffle-icon-spin" : ""}`} />
+              <img
+                src="/shuffle-icon.png"
+                alt=""
+                className={`shuffle-icon-img ${shufflePlaying ? "shuffle-icon-spin" : ""}`}
+              />
               <span className="shuffle-label">
                 {shufflePlaying ? "Eligiendo..." : "SHUFFLE"}
               </span>
@@ -410,6 +676,7 @@ export default function Main() {
                 ? "1 contenido disponible"
                 : `${total} contenidos disponibles`}
           </p>
+          <p className="shuffle-caption">Deja que Couch Pick te saque de la indecision.</p>
           {total === 0 && !isLoading && (
             <p className="shuffle-hint">Añade contenido en Gestionar para usar el shuffle.</p>
           )}
@@ -446,7 +713,32 @@ export default function Main() {
         </AnimatePresence>
 
         <section className="cards-section">
-          <h2 className="section-title">Contenidos disponibles</h2>
+          <div className="cards-section-head">
+            <div className="cards-section-copy">
+              <h2 className="section-title">Contenidos disponibles</h2>
+              <p className="section-subtitle">Desliza para explorar tu coleccion y abre cualquier card para ver mas detalle.</p>
+            </div>
+            {items.length > 0 && total > 0 && (
+              <div className="cards-nav" aria-label="Navegacion del carrusel">
+                <button
+                  type="button"
+                  className="cards-nav-btn"
+                  onClick={() => scrollCarousel("left")}
+                  aria-label="Anterior"
+                >
+                  <IconArrowLeft className="cards-nav-icon" />
+                </button>
+                <button
+                  type="button"
+                  className="cards-nav-btn"
+                  onClick={() => scrollCarousel("right")}
+                  aria-label="Siguiente"
+                >
+                  <IconArrowRight className="cards-nav-icon" />
+                </button>
+              </div>
+            )}
+          </div>
           {isLoading ? (
             <div className="cards-skeleton-h">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -455,26 +747,6 @@ export default function Main() {
             </div>
           ) : (
             <div className="cards-scroll-container">
-              {items.length > 0 && total > 0 && (
-                <>
-                  <button
-                    type="button"
-                    className="cards-scroll-arrow cards-scroll-arrow-left"
-                    onClick={() => scrollCarousel("left")}
-                    aria-label="Anterior"
-                  >
-                    <span className="cards-scroll-chevron" aria-hidden>&lt;</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="cards-scroll-arrow cards-scroll-arrow-right"
-                    onClick={() => scrollCarousel("right")}
-                    aria-label="Siguiente"
-                  >
-                    <span className="cards-scroll-chevron" aria-hidden>&gt;</span>
-                  </button>
-                </>
-              )}
               <div className="cards-scroll-gradient cards-scroll-gradient-left" aria-hidden />
               <div className="cards-scroll-gradient cards-scroll-gradient-right" aria-hidden />
               <div ref={carouselScrollRef} className="cards-scroll-wrap" role="region" aria-label="Carrusel de contenidos">

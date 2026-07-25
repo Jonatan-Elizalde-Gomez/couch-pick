@@ -1,12 +1,13 @@
 import type { Context } from "hono";
 import type { Env } from "../bindings";
+import { decodeSessionToken, isAllowedEmail } from "./auth";
 
 const WINDOW_SEC = 60;
 const PREFIX_GLOBAL = "rl:g:";
-const PREFIX_AUTH = "rl:a:";
+const PREFIX_LOGIN = "rl:login:";
 const PREFIX_HEALTH = "rl:h:";
 const LIMIT_GLOBAL = 100;
-const LIMIT_AUTH = 10;
+const LIMIT_LOGIN = 10;
 const LIMIT_HEALTH = 5;
 
 function getWindow(): number {
@@ -36,67 +37,97 @@ async function checkLimit(
   return { allowed: true, remaining: Math.max(0, limit - next) };
 }
 
+async function shouldBypassRateLimit(c: Context<{ Bindings: Env }>, path: string): Promise<boolean> {
+  const token = c.req.header("x-couchpick-session") ?? c.req.query("session");
+  if (token) {
+    const payload = await decodeSessionToken(c.env, token);
+    if (payload?.email && isAllowedEmail(c.env, payload.email)) {
+      return true;
+    }
+  }
+
+  if (path === "/auth/login") {
+    const contentType = c.req.header("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = await c.req.raw.clone().json().catch(() => null) as { email?: string } | null;
+      if (body?.email && isAllowedEmail(c.env, body.email)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /**
- * Rate limit middleware: global por IP y más estricto en /auth.
- * Usa KV (CACHE). Responde 429 si se supera el límite.
- * /health tiene su propio límite (5/min) además del global.
+ * Rate limit middleware.
+ * If KV fails for any reason, the app should keep serving traffic instead of returning 500s.
  */
 export async function rateLimitMiddleware(
   c: Context<{ Bindings: Env }>,
   next: () => Promise<void>
 ): Promise<Response | void> {
-  const kv = c.env.CACHE;
-  const path = new URL(c.req.url).pathname;
-  const ip = getClientIp(c);
-  const win = getWindow();
+  try {
+    const kv = c.env.CACHE;
+    const path = new URL(c.req.url).pathname;
+    const ip = getClientIp(c);
+    const win = getWindow();
 
-  if (path === "/health") {
-    const keyHealth = `${PREFIX_HEALTH}${win}:${ip}`;
-    const { allowed } = await checkLimit(kv, keyHealth, LIMIT_HEALTH);
-    if (!allowed) {
-      return c.json(
-        { error: "Límite de health superado. Espera un minuto." },
-        429,
-        {
-          headers: {
-            "Retry-After": String(WINDOW_SEC),
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
+    if (await shouldBypassRateLimit(c, path)) {
+      await next();
+      return;
     }
-  }
 
-  if (path.startsWith("/auth")) {
-    const keyAuth = `${PREFIX_AUTH}${win}:${ip}`;
-    const { allowed, remaining } = await checkLimit(kv, keyAuth, LIMIT_AUTH);
-    if (!allowed) {
-      return c.json(
-        { error: "Demasiados intentos. Espera un minuto." },
-        429,
-        {
-          headers: {
-            "Retry-After": String(WINDOW_SEC),
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
-    }
-  }
-
-  const keyGlobal = `${PREFIX_GLOBAL}${win}:${ip}`;
-  const { allowed, remaining } = await checkLimit(kv, keyGlobal, LIMIT_GLOBAL);
-  if (!allowed) {
-    return c.json(
-      { error: "Límite de solicitudes superado. Espera un minuto." },
-      429,
-      {
-        headers: {
-          "Retry-After": String(WINDOW_SEC),
-          "X-RateLimit-Remaining": "0",
-        },
+    if (path === "/health") {
+      const keyHealth = `${PREFIX_HEALTH}${win}:${ip}`;
+      const { allowed } = await checkLimit(kv, keyHealth, LIMIT_HEALTH);
+      if (!allowed) {
+        return c.json(
+          { error: "Limite de health superado. Espera un minuto." },
+          429,
+          {
+            headers: {
+              "Retry-After": String(WINDOW_SEC),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        );
       }
-    );
+    }
+
+    if (path === "/auth/login") {
+      const keyLogin = `${PREFIX_LOGIN}${win}:${ip}`;
+      const { allowed } = await checkLimit(kv, keyLogin, LIMIT_LOGIN);
+      if (!allowed) {
+        return c.json(
+          { error: "Demasiados intentos. Espera un minuto." },
+          429,
+          {
+            headers: {
+              "Retry-After": String(WINDOW_SEC),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        );
+      }
+    }
+
+    const keyGlobal = `${PREFIX_GLOBAL}${win}:${ip}`;
+    const { allowed } = await checkLimit(kv, keyGlobal, LIMIT_GLOBAL);
+    if (!allowed) {
+      return c.json(
+        { error: "Limite de solicitudes superado. Espera un minuto." },
+        429,
+        {
+          headers: {
+            "Retry-After": String(WINDOW_SEC),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+  } catch (error) {
+    console.error("rateLimitMiddleware failed; continuing without rate limit", error);
   }
 
   await next();

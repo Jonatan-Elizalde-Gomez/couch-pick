@@ -293,6 +293,14 @@ export default function ShuffleAnimation({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: "spring", damping: 20, stiffness: 300 }}
             >
+              <div className="shuffle-winner-backdrop" aria-hidden>
+                {img ? (
+                  <img src={img} alt="" className="shuffle-winner-backdrop-img" />
+                ) : (
+                  <div className="shuffle-winner-backdrop-fallback" />
+                )}
+                <div className="shuffle-winner-backdrop-overlay" />
+              </div>
               <button
                 type="button"
                 className="shuffle-close-btn"
@@ -310,7 +318,10 @@ export default function ShuffleAnimation({
               </header>
 
               <div className="shuffle-winner-body">
-                <div className="shuffle-winner-flex">
+                <div className="shuffle-winner-hero">
+                  <span className={`shuffle-winner-tipo ${tipoClass}`}>
+                    {MEDIA_TYPE_LABELS[item.tipo] ?? item.tipo}
+                  </span>
                   <div className="shuffle-winner-thumb">
                     {img ? (
                       <img src={img} alt="" />
@@ -319,10 +330,9 @@ export default function ShuffleAnimation({
                     )}
                     <div className="shuffle-winner-thumb-ring" />
                   </div>
+                </div>
+                <div className="shuffle-winner-flex">
                   <div className="shuffle-winner-info">
-                    <span className={`shuffle-winner-tipo ${tipoClass}`}>
-                      {MEDIA_TYPE_LABELS[item.tipo] ?? item.tipo}
-                    </span>
                     <h3 className="shuffle-winner-item-title">{item.titulo}</h3>
                     {item.descripcion && (
                       <p className="shuffle-winner-desc">{item.descripcion}</p>
@@ -330,21 +340,25 @@ export default function ShuffleAnimation({
                   </div>
                 </div>
 
-                {item.generos && item.generos.length > 0 && (
-                  <div className="shuffle-winner-generos">
-                    {item.generos.map((g) => (
-                      <span key={g} className="shuffle-winner-genre">{g}</span>
-                    ))}
-                  </div>
-                )}
+                {(item.generos?.length || item.tags?.length) ? (
+                  <div className="shuffle-winner-meta">
+                    {item.generos && item.generos.length > 0 && (
+                      <div className="shuffle-winner-generos">
+                        {item.generos.map((g) => (
+                          <span key={g} className="shuffle-winner-genre">{g}</span>
+                        ))}
+                      </div>
+                    )}
 
-                {item.tags && item.tags.length > 0 && (
-                  <div className="shuffle-winner-tags">
-                    {item.tags.map((t) => (
-                      <span key={t} className="shuffle-winner-tag">#{t}</span>
-                    ))}
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="shuffle-winner-tags">
+                        {item.tags.map((t) => (
+                          <span key={t} className="shuffle-winner-tag">#{t}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                ) : null}
               </div>
 
               <footer className="shuffle-winner-footer">

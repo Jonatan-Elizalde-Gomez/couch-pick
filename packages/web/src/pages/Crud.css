@@ -10,12 +10,14 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: hsl(0 0% 6% / 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid hsl(0 0% 22% / 0.5);
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  background:
+    linear-gradient(90deg, rgb(0 114 143 / 0.18), transparent 22%),
+    hsl(0 0% 7% / 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid hsl(0 0% 100% / 0.06);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -24,8 +26,9 @@
 .crud-header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.8rem;
   min-width: 0;
+  flex: 1 1 18rem;
 }
 
 .crud-back {
@@ -34,18 +37,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  color: var(--accent);
-  background: hsl(142 71% 40% / 0.15);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: hsl(0 0% 100% / 0.015);
+  border: 1px solid hsl(0 0% 100% / 0.08);
+  border-radius: 0.8rem;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
 .crud-back:hover {
-  background: hsl(142 71% 40% / 0.25);
-  color: #fff;
+  color: var(--text);
+  border-color: rgb(0 114 143 / 0.42);
+  background: rgb(0 114 143 / 0.14);
+  transform: translateY(-1px);
 }
 
 .crud-back-icon {
@@ -53,35 +57,33 @@
   height: 1.25rem;
 }
 
-.crud-logo-box {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  background: hsl(142 71% 40% / 0.1);
-  border: 1px solid hsl(142 71% 40% / 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.crud-logo-image {
+  width: 2.65rem;
+  height: 2.65rem;
+  object-fit: contain;
   flex-shrink: 0;
+  filter: drop-shadow(0 3px 8px hsl(0 0% 0% / 0.24));
 }
 
-.crud-logo-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--accent);
+.crud-brand-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
 }
 
 .crud-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.24rem;
+  font-weight: 750;
   color: var(--text);
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .crud-item-count {
-  margin: 0.15rem 0 0;
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.79rem;
   color: var(--text-muted);
 }
 
@@ -102,22 +104,34 @@
 }
 
 .btn-agregar {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+  padding: 0.58rem 0.82rem;
+  font-size: 0.9rem;
+  font-weight: 650;
   color: #fff;
-  background: var(--accent);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s;
+  background:
+    linear-gradient(180deg, rgb(0 114 143 / 0.96), rgb(0 114 143 / 0.82));
+  border: 1px solid rgb(0 114 143 / 0.42);
+  border-radius: 0.8rem;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.08),
+    0 8px 20px rgb(0 114 143 / 0.18);
 }
 
 .btn-agregar:hover {
-  background: var(--accent-hover);
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgb(0 114 143 / 1), rgb(0 114 143 / 0.88));
+  border-color: rgb(0 114 143 / 0.58);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.1),
+    0 12px 26px rgb(0 114 143 / 0.22);
 }
 
 .btn-agregar-icon {
@@ -127,36 +141,83 @@
 
 @media (max-width: 768px) {
   .crud-header {
-    padding: 0.6rem 0.75rem;
-    gap: 0.5rem;
+    padding: 0.72rem 0.75rem;
+    gap: 0.55rem;
+    background:
+      linear-gradient(180deg, rgb(0 114 143 / 0.14) 0%, rgb(0 114 143 / 0.06) 34%, transparent 72%),
+      hsl(0 0% 7% / 0.96);
   }
 
-  .crud-title {
-    font-size: 1.1rem;
-  }
-
-  .crud-item-count {
-    font-size: 0.75rem;
+  .crud-header-left {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .crud-header-right {
-    gap: 0.4rem;
+    display: contents;
+  }
+
+  .crud-title {
+    font-size: 1.12rem;
+  }
+
+  .crud-item-count {
+    font-size: 0.74rem;
   }
 
   .crud-header-right .nav-btn {
-    padding: 0.45rem 0.6rem;
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0.68rem;
     font-size: 0.85rem;
   }
 
+  .crud-header-right .nav-btn-logout {
+    order: 2;
+    width: auto;
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .crud-toolbar {
+    gap: 0.75rem;
+  }
+
+  .crud-toolbar-actions {
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .crud-actions-dropdown {
+    right: 0;
+    min-width: 160px;
+  }
+
+  .crud-fab-add {
+    right: 1rem;
+    bottom: 1rem;
+    padding: 0.68rem 0.9rem;
+    font-size: 0.84rem;
+  }
+
+  .crud-fab-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
   .btn-agregar {
-    padding: 0.45rem 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.68rem;
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 480px) {
   .crud-header {
-    padding: 0.5rem 0.6rem;
+    padding: 0.68rem 0.6rem;
+    background:
+      linear-gradient(180deg, rgb(0 114 143 / 0.12) 0%, rgb(0 114 143 / 0.05) 34%, transparent 72%),
+      hsl(0 0% 7% / 0.97);
   }
 
   .crud-back {
@@ -169,14 +230,9 @@
     height: 1rem;
   }
 
-  .crud-logo-box {
-    width: 2rem;
-    height: 2rem;
-  }
-
-  .crud-logo-icon {
-    width: 1rem;
-    height: 1rem;
+  .crud-logo-image {
+    width: 2.3rem;
+    height: 2.3rem;
   }
 
   .crud-title {
@@ -198,6 +254,8 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .crud-content {
@@ -207,12 +265,104 @@
   padding: 1.5rem 1rem 2rem;
 }
 
+.crud-fab-add {
+  position: fixed;
+  right: max(1.25rem, env(safe-area-inset-right, 0px) + 1rem);
+  bottom: max(1.25rem, env(safe-area-inset-bottom, 0px) + 1rem);
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.58rem;
+  padding: 0.78rem 1.08rem;
+  color: #fff;
+  background: linear-gradient(180deg, rgb(0 114 143 / 0.98), rgb(0 114 143 / 0.88));
+  border: 1px solid rgb(0 114 143 / 0.42);
+  border-radius: 999px;
+  font-size: 0.94rem;
+  font-weight: 560;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.12),
+    0 8px 20px rgb(0 114 143 / 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.crud-fab-add:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, rgb(0 114 143 / 1), rgb(0 114 143 / 0.92));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.16),
+    0 10px 24px rgb(0 114 143 / 0.16);
+}
+
+.crud-fab-icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.45;
+  flex-shrink: 0;
+}
+
 .crud-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.crud-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.crud-toolbar .nav-btn {
+  min-height: 2.5rem;
+}
+
+.crud-actions-menu {
+  position: relative;
+}
+
+.crud-actions-trigger {
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding-inline: 0.7rem;
+}
+
+.crud-actions-dropdown {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  min-width: 172px;
+  padding: 0.4rem;
+  border-radius: 14px;
+  border: 1px solid hsl(0 0% 100% / 0.08);
+  background: hsl(210 20% 14% / 0.98);
+  box-shadow: 0 18px 40px hsl(0 0% 0% / 0.34);
+  z-index: 20;
+}
+
+.crud-actions-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  color: hsl(0 0% 96%);
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.crud-actions-dropdown-item:hover {
+  background: hsl(0 0% 100% / 0.05);
+  color: #fff;
 }
 
 .crud-search-wrap {
@@ -237,6 +387,7 @@
 
 .crud-search {
   width: 100%;
+  min-height: 2.5rem;
   padding: 0.6rem 0.75rem 0.6rem 2.25rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -257,7 +408,7 @@
 .nav-btn-active {
   color: var(--text);
   border-color: var(--accent);
-  background: hsl(142 71% 40% / 0.08);
+  background: rgb(0 114 143 / 0.12);
 }
 
 .crud-filters-badge {
@@ -275,6 +426,18 @@
   border-radius: 999px;
 }
 
+.crud-clear-all-btn {
+  color: hsl(0 90% 76%);
+  border-color: hsl(0 65% 45% / 0.28);
+  background: hsl(0 65% 45% / 0.08);
+}
+
+.crud-clear-all-btn:hover {
+  color: hsl(0 100% 90%);
+  border-color: hsl(0 65% 45% / 0.42);
+  background: hsl(0 65% 45% / 0.14);
+}
+
 .crud-filters-panel {
   display: flex;
   flex-direction: column;
@@ -282,6 +445,20 @@
   margin-bottom: 1rem;
   padding: 0.75rem 0;
   border-top: 1px solid var(--border);
+}
+
+.crud-filters-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s ease;
+}
+
+.crud-filters-collapse-open {
+  grid-template-rows: 1fr;
+}
+
+.crud-filters-collapse-inner {
+  overflow: hidden;
 }
 
 .crud-filters-block {

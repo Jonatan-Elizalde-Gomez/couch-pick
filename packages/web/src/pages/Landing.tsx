@@ -57,9 +57,11 @@ export default function Landing() {
 
       <div className="landing-content">
         <div className="landing-brand">
-          <div className="landing-logo-box">
-            <IconSparkles className="landing-logo-icon" />
-          </div>
+          <img
+            src="/couch-pick-logo-blanco.svg"
+            alt="Couch Pick"
+            className="landing-logo-image"
+          />
           <h1 className="landing-app-name">Couch Pick</h1>
           <p className="landing-tagline">Tu asistente para elegir que ver</p>
         </div>

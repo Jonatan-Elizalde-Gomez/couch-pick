@@ -13,6 +13,7 @@ const API_BASE = (() => {
 })();
 const SESSION_STORAGE_KEY = "couchpick-session";
 const AUTH_INVALIDATED_EVENT = "couchpick:auth-invalidated";
+const BACKEND_UNAVAILABLE_EVENT = "couchpick:backend-unavailable";
 const REFRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 type SessionState = {
@@ -21,6 +22,16 @@ type SessionState = {
 };
 
 let refreshPromise: Promise<string | null> | null = null;
+
+export type BackendUnavailableDetail = {
+  path: string;
+  status: number | null;
+  reason: string;
+};
+
+export function getApiBase(): string {
+  return API_BASE;
+}
 
 function getSessionStorages(): Storage[] {
   return [sessionStorage, localStorage];
@@ -72,6 +83,32 @@ function applySessionFromResponse(res: Response) {
 
 export function getAuthInvalidatedEventName(): string {
   return AUTH_INVALIDATED_EVENT;
+}
+
+export function getBackendUnavailableEventName(): string {
+  return BACKEND_UNAVAILABLE_EVENT;
+}
+
+function emitBackendUnavailable(detail: BackendUnavailableDetail) {
+  window.dispatchEvent(new CustomEvent<BackendUnavailableDetail>(BACKEND_UNAVAILABLE_EVENT, { detail }));
+}
+
+function isBackendUnavailableStatus(status: number): boolean {
+  return status === 404 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+async function handleBackendUnavailableResponse(path: string, res: Response) {
+  if (!isBackendUnavailableStatus(res.status)) return;
+
+  const data = await res.clone().json().catch(() => null) as { error?: string } | null;
+  const hasHandledErrorPayload = !!data?.error;
+  if (res.status === 404 && hasHandledErrorPayload) return;
+
+  emitBackendUnavailable({
+    path,
+    status: res.status,
+    reason: data?.error ?? `HTTP ${res.status}`,
+  });
 }
 
 export function getSession(): SessionState | null {
@@ -154,7 +191,19 @@ export async function fetchApi(
   };
   if (activeSession?.token) (headers as Record<string, string>)["x-couchpick-session"] = activeSession.token;
 
-  const res = await fetch(API_BASE + path, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(API_BASE + path, { ...options, headers });
+  } catch (error) {
+    emitBackendUnavailable({
+      path,
+      status: null,
+      reason: error instanceof Error ? error.message : "Network error",
+    });
+    throw error;
+  }
+
+  await handleBackendUnavailableResponse(path, res);
   applySessionFromResponse(res);
 
   if (res.status === 401 && retryOnUnauthorized && path !== "/auth/refresh" && activeSession?.token) {

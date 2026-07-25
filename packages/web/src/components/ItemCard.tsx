@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "../api/items";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
 import { IconEye, IconEyeOff } from "./icons";
@@ -7,6 +8,66 @@ import "./ItemCard.css";
 export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { item: Item; showEye?: boolean; onClick?: () => void; onToggleVisto?: () => void }) {
   const img = item.posterUrl ?? item.thumbnailUrl ?? null;
   const tipoClass = MEDIA_TYPE_COLORS[item.tipo] ?? "";
+  const genres = useMemo(() => item.generos?.filter(Boolean) ?? [], [item.generos]);
+  const metaRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [visibleGenres, setVisibleGenres] = useState<string[]>([]);
+
+  useEffect(() => {
+    function updateVisibleGenres() {
+      const container = metaRef.current;
+      const measure = measureRef.current;
+      if (!container || !measure || genres.length === 0) {
+        setVisibleGenres((current) => (current.length === 0 ? current : []));
+        return;
+      }
+
+      const availableWidth = container.clientWidth;
+      if (availableWidth <= 0) {
+        setVisibleGenres((current) => (current.length === 0 ? current : []));
+        return;
+      }
+
+      const chips = Array.from(measure.querySelectorAll<HTMLElement>("[data-genre-chip]"));
+      const nextVisible: string[] = [];
+      let usedWidth = 0;
+      const gap = 6;
+
+      for (let index = 0; index < genres.length; index += 1) {
+        const chip = chips[index];
+        if (!chip) continue;
+
+        const chipWidth = Math.ceil(chip.getBoundingClientRect().width);
+        if (chipWidth > availableWidth) continue;
+
+        const projectedWidth = nextVisible.length === 0 ? chipWidth : usedWidth + gap + chipWidth;
+        if (projectedWidth > availableWidth) continue;
+
+        nextVisible.push(genres[index]);
+        usedWidth = projectedWidth;
+      }
+
+      setVisibleGenres((current) => (
+        current.length === nextVisible.length && current.every((value, index) => value === nextVisible[index])
+          ? current
+          : nextVisible
+      ));
+    }
+
+    updateVisibleGenres();
+
+    const container = metaRef.current;
+    if (!container) return;
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => updateVisibleGenres());
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateVisibleGenres);
+    return () => window.removeEventListener("resize", updateVisibleGenres);
+  }, [genres]);
 
   return (
     <motion.article
@@ -26,7 +87,6 @@ export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { it
           ) : (
             <div className="item-card-placeholder" />
           )}
-          {/* Overlay gradient: mismo contenedor que la imagen para que escale junto en hover */}
           <div className="item-card-overlay" />
         </div>
         <span className={`item-card-tipo pill rounded-full ${tipoClass}`}>
@@ -57,13 +117,24 @@ export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { it
         {!showEye && item.visto && <span className="item-card-badge visto">Visto</span>}
       </div>
       <div className="item-card-body">
-        <h3 className="item-card-title">{item.titulo}</h3>
-        {item.tags && item.tags.length > 0 && (
-          <div className="item-card-tags">
-            {item.tags.slice(0, 2).map((t) => (
-              <span key={t} className="tag" title={t}>#{t}</span>
-            ))}
-          </div>
+        <h3 className={`item-card-title ${visibleGenres.length > 0 ? "item-card-title-single-line" : ""}`}>{item.titulo}</h3>
+        {genres.length > 0 && (
+          <>
+            <div ref={metaRef} className="item-card-meta">
+              {visibleGenres.map((value) => (
+                <span key={value} className="item-card-genre" title={value}>
+                  {value}
+                </span>
+              ))}
+            </div>
+            <div ref={measureRef} className="item-card-meta-measure" aria-hidden>
+              {genres.map((value) => (
+                <span key={value} data-genre-chip className="item-card-genre">
+                  {value}
+                </span>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </motion.article>
