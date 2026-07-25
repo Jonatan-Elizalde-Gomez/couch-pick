@@ -9,8 +9,10 @@ import {
   deleteItem,
   exportBackup,
   importBackup,
+  getNextWatchStatus,
   type Item,
   type ItemTipo,
+  type WatchStatus,
 } from "../api/items";
 import ItemForm from "../components/ItemForm";
 import ManageCard from "../components/ManageCard";
@@ -23,6 +25,7 @@ import {
   IconArrowLeft,
   IconEye,
   IconEyeOff,
+  IconCircleDot,
   IconPlus,
   IconDownload,
   IconUpload,
@@ -41,7 +44,15 @@ import "./Crud.css";
 import "./Main.css";
 
 const TIPOS: ItemTipo[] = ["movie", "series", "anime", "youtube"];
-type EstadoFilter = "all" | "watched" | "unwatched";
+const STATUS_OPTIONS: Array<{
+  value: WatchStatus;
+  label: string;
+  Icon: ({ className }: { className?: string }) => JSX.Element;
+}> = [
+  { value: "unwatched", label: "No vistos", Icon: IconEyeOff },
+  { value: "watching", label: "Viendo", Icon: IconCircleDot },
+  { value: "watched", label: "Vistos", Icon: IconEye },
+];
 
 export default function Crud() {
   const navigate = useNavigate();
@@ -51,7 +62,8 @@ export default function Crud() {
   const [tipoExcludeFilters, setTipoExcludeFilters] = useState<ItemTipo[]>([]);
   const [generoFilters, setGeneroFilters] = useState<string[]>([]);
   const [generoExcludeFilters, setGeneroExcludeFilters] = useState<string[]>([]);
-  const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>("all");
+  const [estadoFilters, setEstadoFilters] = useState<WatchStatus[]>([]);
+  const [estadoExcludeFilters, setEstadoExcludeFilters] = useState<WatchStatus[]>([]);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
@@ -111,20 +123,21 @@ export default function Crud() {
     const next: {
       tipo?: ItemTipo[];
       tipoExcluir?: ItemTipo[];
-      visto?: boolean;
+      estado?: WatchStatus[];
+      estadoExcluir?: WatchStatus[];
       genero?: string[];
       generoExcluir?: string[];
     } = {};
 
     if (tipoFilters.length > 0) next.tipo = tipoFilters;
     if (tipoExcludeFilters.length > 0) next.tipoExcluir = tipoExcludeFilters;
-    if (estadoFilter === "watched") next.visto = true;
-    if (estadoFilter === "unwatched") next.visto = false;
+    if (estadoFilters.length > 0) next.estado = estadoFilters;
+    if (estadoExcludeFilters.length > 0) next.estadoExcluir = estadoExcludeFilters;
     if (generoFilters.length > 0) next.genero = generoFilters;
     if (generoExcludeFilters.length > 0) next.generoExcluir = generoExcludeFilters;
 
     return next;
-  }, [tipoFilters, tipoExcludeFilters, estadoFilter, generoFilters, generoExcludeFilters]);
+  }, [tipoFilters, tipoExcludeFilters, estadoFilters, estadoExcludeFilters, generoFilters, generoExcludeFilters]);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["items", filters],
@@ -136,13 +149,14 @@ export default function Crud() {
     tipoExcludeFilters.length > 0 ||
     generoFilters.length > 0 ||
     generoExcludeFilters.length > 0 ||
-    estadoFilter !== "all" ||
+    estadoFilters.length > 0 ||
+    estadoExcludeFilters.length > 0 ||
     search.trim() !== "";
 
   const activeFiltersCount =
     (tipoFilters.length + tipoExcludeFilters.length ? 1 : 0) +
     (generoFilters.length + generoExcludeFilters.length ? 1 : 0) +
-    (estadoFilter !== "all" ? 1 : 0) +
+    (estadoFilters.length + estadoExcludeFilters.length ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
   const visibleGenreScopes = useMemo(
@@ -172,7 +186,8 @@ export default function Crud() {
     setTipoExcludeFilters([]);
     setGeneroFilters([]);
     setGeneroExcludeFilters([]);
-    setEstadoFilter("all");
+    setEstadoFilters([]);
+    setEstadoExcludeFilters([]);
     setSearch("");
   };
 
@@ -210,6 +225,24 @@ export default function Crud() {
     }
 
     setGeneroFilters((current) => [...current, genero]);
+  };
+
+  const cycleEstadoFilter = (estado: WatchStatus) => {
+    const included = estadoFilters.includes(estado);
+    const excluded = estadoExcludeFilters.includes(estado);
+
+    if (included) {
+      setEstadoFilters((current) => current.filter((value) => value !== estado));
+      setEstadoExcludeFilters((current) => [...current, estado]);
+      return;
+    }
+
+    if (excluded) {
+      setEstadoExcludeFilters((current) => current.filter((value) => value !== estado));
+      return;
+    }
+
+    setEstadoFilters((current) => [...current, estado]);
   };
 
   const filteredItems = useMemo(() => {
@@ -250,8 +283,8 @@ export default function Crud() {
     },
   });
 
-  const toggleVisto = (item: Item) => {
-    updateMutation.mutate({ id: item.id, body: { visto: !item.visto } });
+  const cycleItemStatus = (item: Item) => {
+    updateMutation.mutate({ id: item.id, body: { estado: getNextWatchStatus(item.estado) } });
   };
 
   useEffect(() => {
@@ -573,14 +606,17 @@ export default function Crud() {
                     <div className="crud-filters-heading">
                       <h4 className="crud-filters-label">Estado</h4>
                       <p className="crud-filters-hint">
-                        Alterna entre todo el catálogo, solo vistos o solo pendientes.
+                        Toca un estado para incluirlo, vuelve a tocar para excluirlo y una vez más para quitarlo.
                       </p>
                     </div>
-                    {estadoFilter !== "all" && (
+                    {(estadoFilters.length > 0 || estadoExcludeFilters.length > 0) && (
                       <button
                         type="button"
                         className="filters-inline-clear"
-                        onClick={() => setEstadoFilter("all")}
+                        onClick={() => {
+                          setEstadoFilters([]);
+                          setEstadoExcludeFilters([]);
+                        }}
                         title="Limpiar estado"
                       >
                         <IconTrash2 className="filters-limpiar-icon" />
@@ -592,9 +628,12 @@ export default function Crud() {
                   <div className="crud-filters-chips">
                     <button
                       type="button"
-                      onClick={() => setEstadoFilter("all")}
+                      onClick={() => {
+                        setEstadoFilters([]);
+                        setEstadoExcludeFilters([]);
+                      }}
                       className={`filter-type-btn ${
-                        estadoFilter === "all"
+                        estadoFilters.length === 0 && estadoExcludeFilters.length === 0
                           ? "filter-type-btn-selected"
                           : "filter-type-btn-unselected"
                       }`}
@@ -602,31 +641,37 @@ export default function Crud() {
                       Todos
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setEstadoFilter("watched")}
-                      className={`filter-type-btn filter-type-btn-with-icon ${
-                        estadoFilter === "watched"
-                          ? "filter-type-btn-selected"
-                          : "filter-type-btn-unselected"
-                      }`}
-                    >
-                      <IconEye className="filter-type-icon" />
-                      Vistos
-                    </button>
+                    {STATUS_OPTIONS.map(({ value, label, Icon }) => {
+                      const mode = estadoFilters.includes(value)
+                        ? "incluir"
+                        : estadoExcludeFilters.includes(value)
+                          ? "excluir"
+                          : "off";
 
-                    <button
-                      type="button"
-                      onClick={() => setEstadoFilter("unwatched")}
-                      className={`filter-type-btn filter-type-btn-with-icon ${
-                        estadoFilter === "unwatched"
-                          ? "filter-type-btn-selected"
-                          : "filter-type-btn-unselected"
-                      }`}
-                    >
-                      <IconEyeOff className="filter-type-icon" />
-                      No vistos
-                    </button>
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => cycleEstadoFilter(value)}
+                          className={`filter-type-btn filter-chip filter-chip-${mode} ${
+                            mode === "off" ? "filter-type-btn-unselected" : ""
+                          }`}
+                        >
+                          <Icon className="filter-type-icon" />
+                          {label}
+                          {mode === "incluir" && (
+                            <span className="filter-chip-badge filter-chip-badge-incluir">
+                              Incluir
+                            </span>
+                          )}
+                          {mode === "excluir" && (
+                            <span className="filter-chip-badge filter-chip-badge-excluir">
+                              Excluir
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -750,9 +795,9 @@ export default function Crud() {
                     item={item}
                     onEdit={setEditing}
                     onDelete={deleteMutation.mutate}
-                    onToggleWatched={(id) => {
+                    onCycleStatus={(id) => {
                       const currentItem = items.find((entry) => entry.id === id);
-                      if (currentItem) toggleVisto(currentItem);
+                      if (currentItem) cycleItemStatus(currentItem);
                     }}
                   />
                 </motion.li>

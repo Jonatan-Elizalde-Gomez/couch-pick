@@ -2,7 +2,6 @@ import { fetchJson } from "./client";
 
 export type FilterPreferences = {
   autoApply: boolean;
-  soloNoVistos: boolean;
 };
 
 export type FilterPreferencesResponse = {

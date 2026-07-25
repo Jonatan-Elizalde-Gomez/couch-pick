@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .main-header {
@@ -644,6 +644,53 @@
   font-size: 0.75rem;
   line-height: 1.45;
   color: var(--text-muted);
+}
+
+.filter-status-card {
+  align-items: flex-start;
+}
+
+.filter-status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.filter-status-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid hsl(0 0% 100% / 0.08);
+  background: hsl(0 0% 100% / 0.04);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.filter-status-btn:hover {
+  color: var(--text);
+  border-color: hsl(0 0% 100% / 0.14);
+  background: hsl(0 0% 100% / 0.06);
+  transform: translateY(-1px);
+}
+
+.filter-status-btn-active {
+  color: rgb(117 211 232);
+  border-color: rgb(0 114 143 / 0.32);
+  background: rgb(0 114 143 / 0.16);
+}
+
+.filter-status-btn-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
 }
 
 .filter-switch-control {
@@ -1711,6 +1758,11 @@
     padding: 0.72rem 0.8rem;
   }
 
+  .filter-status-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .filters-panel-card {
     padding: 0.85rem 0.9rem 0.95rem;
   }
@@ -1782,6 +1834,15 @@
 
   .filter-switch-title {
     font-size: 0.84rem;
+  }
+
+  .filter-status-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-status-btn {
+    width: 100%;
   }
 
   .filters-accordion-trigger {

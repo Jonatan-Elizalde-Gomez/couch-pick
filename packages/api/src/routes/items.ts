@@ -7,6 +7,8 @@ import { getDb } from "../db";
 import { items, tags, itemTags, itemGeneros } from "../db/schema";
 
 const tipoEnum = z.enum(["movie", "series", "anime", "youtube"]);
+const estadoEnum = z.enum(["unwatched", "watching", "watched"]);
+type WatchStatus = z.infer<typeof estadoEnum>;
 
 const createItemSchema = z.object({
   tipo: tipoEnum,
@@ -17,6 +19,7 @@ const createItemSchema = z.object({
   url: z.string().optional().nullable(),
   generos: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
+  estado: estadoEnum.optional(),
   visto: z.boolean().optional(),
 });
 
@@ -39,16 +42,33 @@ function getQueryArray(url: URL, key: string): string[] {
   return raw.flatMap((s) => s.split(",").map((x) => x.trim()).filter(Boolean));
 }
 
+function resolveEstado(input: { estado?: string | null; visto?: boolean | null }): WatchStatus {
+  if (input.estado === "unwatched" || input.estado === "watching" || input.estado === "watched") {
+    return input.estado;
+  }
+
+  return input.visto ? "watched" : "unwatched";
+}
+
+function serializeItem<T extends { estado?: string | null; visto?: boolean | null }>(item: T) {
+  const estado = resolveEstado(item);
+  return {
+    ...item,
+    estado,
+    visto: estado === "watched",
+  };
+}
+
 itemsRouter.get("/", async (c) => {
   const url = new URL(c.req.url);
   const tipos = getQueryArray(url, "tipo");
   const tipoExcluir = getQueryArray(url, "tipoExcluir");
-  const visto = c.req.query("visto");
+  const estados = getQueryArray(url, "estado");
+  const estadosExcluir = getQueryArray(url, "estadoExcluir");
   const tagsFilter = getQueryArray(url, "tag");
   const tagsExcluir = getQueryArray(url, "tagExcluir");
   const generos = getQueryArray(url, "genero");
   const generosExcluir = getQueryArray(url, "generoExcluir");
-  const soloNoVistos = c.req.query("soloNoVistos") === "true";
 
   const db = getDb(c.env.DB);
   let q = db.select().from(items);
@@ -56,8 +76,8 @@ itemsRouter.get("/", async (c) => {
   const conditions = [];
   if (tipos.length > 0) conditions.push(inArray(items.tipo, tipos as any));
   if (tipoExcluir.length > 0) conditions.push(not(inArray(items.tipo, tipoExcluir as any)));
-  if (visto !== undefined && visto !== "") conditions.push(eq(items.visto, visto === "true"));
-  if (soloNoVistos) conditions.push(eq(items.visto, false));
+  if (estados.length > 0) conditions.push(inArray(items.estado, estados as any));
+  if (estadosExcluir.length > 0) conditions.push(not(inArray(items.estado, estadosExcluir as any)));
 
   if (conditions.length) {
     q = db.select().from(items).where(and(...conditions)) as any;
@@ -131,7 +151,7 @@ itemsRouter.get("/", async (c) => {
         db.select({ genero: itemGeneros.genero }).from(itemGeneros).where(eq(itemGeneros.itemId, item.id)),
       ]);
       return {
-        ...item,
+        ...serializeItem(item),
         tags: tagRows.map((r) => r.name),
         generos: genRows.map((r) => r.genero),
       };
@@ -163,7 +183,7 @@ itemsRouter.get("/export", async (c) => {
         db.select({ genero: itemGeneros.genero }).from(itemGeneros).where(eq(itemGeneros.itemId, item.id)),
       ]);
       return {
-        ...item,
+        ...serializeItem(item),
         tags: tagRows.map((r) => r.name),
         generos: genRows.map((r) => r.genero),
       };
@@ -180,6 +200,7 @@ const importItemSchema = z.object({
   thumbnailUrl: z.string().url().optional().nullable(),
   posterUrl: z.string().url().optional().nullable(),
   url: z.string().optional().nullable(),
+  estado: estadoEnum.optional(),
   visto: z.boolean().optional(),
   externalId: z.string().optional().nullable(),
   createdAt: z.union([z.string(), z.number()]).optional(),
@@ -212,7 +233,8 @@ itemsRouter.post("/import", async (c) => {
       thumbnailUrl: row.thumbnailUrl ?? null,
       posterUrl: row.posterUrl ?? null,
       url: row.url ?? null,
-      visto: row.visto ?? false,
+      estado: resolveEstado(row),
+      visto: resolveEstado(row) === "watched",
       externalId: row.externalId ?? null,
       createdAt,
       updatedAt,
@@ -247,7 +269,7 @@ itemsRouter.get("/:id", async (c) => {
     db.select({ genero: itemGeneros.genero }).from(itemGeneros).where(eq(itemGeneros.itemId, id)),
   ]);
   return c.json({
-    ...item,
+    ...serializeItem(item),
     tags: tagRows.map((r) => r.name),
     generos: genRows.map((r) => r.genero),
   });
@@ -270,7 +292,8 @@ itemsRouter.post("/", async (c) => {
       thumbnailUrl: parsed.data.thumbnailUrl ?? null,
       posterUrl: parsed.data.posterUrl ?? null,
       url: parsed.data.url ?? null,
-      visto: parsed.data.visto ?? false,
+      estado: resolveEstado(parsed.data),
+      visto: resolveEstado(parsed.data) === "watched",
       externalId: null,
       createdAt: now,
       updatedAt: now,
@@ -301,7 +324,7 @@ itemsRouter.post("/", async (c) => {
     ]);
     return c.json(
       {
-        ...created,
+        ...serializeItem(created),
         tags: tagRows.map((r) => r.name),
         generos: genRows.map((r) => r.genero),
       },
@@ -330,8 +353,12 @@ itemsRouter.patch("/:id", async (c) => {
   if (parsed.data.thumbnailUrl !== undefined) patch.thumbnailUrl = parsed.data.thumbnailUrl;
   if (parsed.data.posterUrl !== undefined) patch.posterUrl = parsed.data.posterUrl;
   if (parsed.data.url !== undefined) patch.url = parsed.data.url;
-  if (parsed.data.visto !== undefined) patch.visto = parsed.data.visto;
   if (parsed.data.tipo !== undefined) patch.tipo = parsed.data.tipo;
+  if (parsed.data.estado !== undefined || parsed.data.visto !== undefined) {
+    const estado = resolveEstado(parsed.data);
+    patch.estado = estado;
+    patch.visto = estado === "watched";
+  }
 
   await db.update(items).set(patch as any).where(eq(items.id, id));
 
@@ -356,7 +383,7 @@ itemsRouter.patch("/:id", async (c) => {
   }
 
   const [updated] = await db.select().from(items).where(eq(items.id, id));
-  return c.json(updated);
+  return c.json(serializeItem(updated));
 });
 
 itemsRouter.delete("/:id", async (c) => {

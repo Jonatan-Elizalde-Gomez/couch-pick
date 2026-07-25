@@ -114,6 +114,11 @@
   border-color: hsl(142 71% 40% / 0.5);
 }
 
+.item-card-eye-wrap.viendo {
+  background: rgb(0 114 143 / 0.24);
+  border-color: rgb(0 114 143 / 0.5);
+}
+
 .item-card-eye-wrap.no-visto {
   background: #000;
 }
@@ -141,6 +146,11 @@
 
 .item-card-badge.visto {
   background: var(--accent);
+  color: #fff;
+}
+
+.item-card-badge.viendo {
+  background: rgb(0 114 143 / 0.92);
   color: #fff;
 }
 

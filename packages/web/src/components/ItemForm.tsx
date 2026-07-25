@@ -9,6 +9,7 @@ import {
   type Item,
   type ItemCreate,
   type ItemTipo,
+  type WatchStatus,
 } from "../api/items";
 import {
   searchTmdbMovies,
@@ -23,7 +24,7 @@ import {
   type FormFillData,
 } from "../api/search";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS, GENRE_OPTIONS } from "../lib/constants";
-import { IconFilm, IconTv, IconPlay, IconYoutube, IconX, IconPlus } from "./icons";
+import { IconFilm, IconTv, IconPlay, IconYoutube, IconX, IconPlus, IconEye, IconEyeOff, IconCircleDot } from "./icons";
 import "./ItemForm.css";
 
 const GENRE_SET = new Set(GENRE_OPTIONS);
@@ -34,7 +35,7 @@ const schema = z.object({
   descripcion: z.string().optional(),
   posterUrl: z.string().url().optional().or(z.literal("")),
   url: z.string().url().optional().or(z.literal("")),
-  visto: z.boolean(),
+  estado: z.enum(["unwatched", "watching", "watched"]),
   tagsStr: z.string().optional(),
   generosStr: z.string().optional(),
 });
@@ -71,12 +72,22 @@ function applyFormFill(
   if (allTags.length) setValue("tagsStr", allTags.join(", "));
 }
 
-const TYPE_ICONS: Record<ItemTipo, React.ComponentType<{ className?: string }>> = {
+const TYPE_ICONS: Record<ItemTipo, ({ className }: { className?: string }) => JSX.Element> = {
   movie: IconFilm,
   series: IconTv,
   anime: IconPlay,
   youtube: IconYoutube,
 };
+
+const STATUS_OPTIONS: Array<{
+  value: WatchStatus;
+  label: string;
+  Icon: ({ className }: { className?: string }) => JSX.Element;
+}> = [
+  { value: "unwatched", label: "No visto", Icon: IconEyeOff },
+  { value: "watching", label: "Viendo", Icon: IconCircleDot },
+  { value: "watched", label: "Visto", Icon: IconEye },
+];
 
 function splitTrim(s: string | undefined): string[] {
   if (!s?.trim()) return [];
@@ -122,7 +133,7 @@ export default function ItemForm({
           descripcion: item.descripcion ?? "",
           posterUrl: item.posterUrl ?? "",
           url: item.url ?? "",
-          visto: item.visto,
+          estado: item.estado,
           tagsStr: item.tags?.join(", ") ?? "",
           generosStr: item.generos?.join(", ") ?? "",
         }
@@ -132,7 +143,7 @@ export default function ItemForm({
           descripcion: "",
           posterUrl: "",
           url: "",
-          visto: false,
+          estado: "unwatched",
           tagsStr: "",
           generosStr: "",
         },
@@ -259,7 +270,7 @@ export default function ItemForm({
       descripcion: data.descripcion || undefined,
       posterUrl: data.posterUrl || undefined,
       url: data.url || undefined,
-      visto: data.visto,
+      estado: data.estado,
       tags: splitTrim(data.tagsStr),
       generos: splitTrim(data.generosStr),
     };
@@ -510,12 +521,25 @@ export default function ItemForm({
         )}
       </div>
 
-      {isEdit && (
-        <label className="form-checkbox">
-          <input type="checkbox" {...register("visto")} />
-          Marcado como visto
-        </label>
-      )}
+      <div className="form-block">
+        <label className="form-label">Estado</label>
+        <div className="type-selector">
+          {STATUS_OPTIONS.map(({ value, label, Icon }) => {
+            const isSelected = watch("estado") === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setValue("estado", value)}
+                className={`type-btn ${isSelected ? "chip-selected" : "type-btn-unselected"}`}
+              >
+                <Icon className="type-btn-icon" />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {error && (
         <p className="form-error">{error instanceof Error ? error.message : "Error"}</p>

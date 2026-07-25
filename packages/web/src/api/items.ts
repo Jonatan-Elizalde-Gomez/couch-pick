@@ -1,6 +1,8 @@
 import { fetchApi, fetchJson } from "./client";
 
 export type ItemTipo = "movie" | "series" | "anime" | "youtube";
+export type WatchStatus = "unwatched" | "watching" | "watched";
+export const WATCH_STATUSES: WatchStatus[] = ["unwatched", "watching", "watched"];
 
 export interface Item {
   id: string;
@@ -10,6 +12,7 @@ export interface Item {
   thumbnailUrl: string | null;
   posterUrl: string | null;
   url: string | null;
+  estado: WatchStatus;
   visto: boolean;
   externalId: string | null;
   createdAt: string | number;
@@ -27,7 +30,7 @@ export interface ItemCreate {
   url?: string | null;
   generos?: string[];
   tags?: string[];
-  visto?: boolean;
+  estado?: WatchStatus;
 }
 
 export interface ItemUpdate extends Partial<ItemCreate> {}
@@ -35,19 +38,30 @@ export interface ItemUpdate extends Partial<ItemCreate> {}
 export interface ShuffleFilters {
   tipo?: ItemTipo[];
   tipoExcluir?: ItemTipo[];
-  soloNoVistos?: boolean;
+  estado?: WatchStatus[];
+  estadoExcluir?: WatchStatus[];
   tag?: string[];
   tagExcluir?: string[];
   genero?: string[];
   generoExcluir?: string[];
 }
 
-export function itemsListParams(filters: ShuffleFilters & { visto?: boolean }): string {
+export function isWatchedStatus(status: WatchStatus): boolean {
+  return status === "watched";
+}
+
+export function getNextWatchStatus(status: WatchStatus): WatchStatus {
+  if (status === "unwatched") return "watching";
+  if (status === "watching") return "watched";
+  return "unwatched";
+}
+
+export function itemsListParams(filters: ShuffleFilters): string {
   const p = new URLSearchParams();
   filters.tipo?.forEach((t) => p.append("tipo", t));
   filters.tipoExcluir?.forEach((t) => p.append("tipoExcluir", t));
-  if (filters.visto !== undefined) p.set("visto", String(filters.visto));
-  if (filters.soloNoVistos) p.set("soloNoVistos", "true");
+  filters.estado?.forEach((status) => p.append("estado", status));
+  filters.estadoExcluir?.forEach((status) => p.append("estadoExcluir", status));
   filters.tag?.forEach((t) => p.append("tag", t));
   filters.tagExcluir?.forEach((t) => p.append("tagExcluir", t));
   filters.genero?.forEach((g) => p.append("genero", g));
@@ -63,13 +77,13 @@ export interface ItemsPageResponse {
   hasMore: boolean;
 }
 
-export async function getItems(filters: ShuffleFilters & { visto?: boolean } = {}): Promise<Item[]> {
+export async function getItems(filters: ShuffleFilters = {}): Promise<Item[]> {
   const q = itemsListParams(filters);
   return fetchJson<Item[]>(`/items?${q}`);
 }
 
 export async function getItemsPaginated(
-  filters: ShuffleFilters & { visto?: boolean },
+  filters: ShuffleFilters,
   page: number,
   limit: number
 ): Promise<ItemsPageResponse> {

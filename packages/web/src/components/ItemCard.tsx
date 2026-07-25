@@ -1,14 +1,29 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "../api/items";
+import { getNextWatchStatus } from "../api/items";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
-import { IconEye, IconEyeOff } from "./icons";
+import { IconEye, IconEyeOff, IconCircleDot } from "./icons";
 import "./ItemCard.css";
 
 export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { item: Item; showEye?: boolean; onClick?: () => void; onToggleVisto?: () => void }) {
   const img = item.posterUrl ?? item.thumbnailUrl ?? null;
   const tipoClass = MEDIA_TYPE_COLORS[item.tipo] ?? "";
   const genres = useMemo(() => item.generos?.filter(Boolean) ?? [], [item.generos]);
+  const statusMeta =
+    item.estado === "watched"
+      ? { className: "visto", label: "Visto", Icon: IconEye }
+      : item.estado === "watching"
+        ? { className: "viendo", label: "Viendo", Icon: IconCircleDot }
+        : { className: "no-visto", label: "No visto", Icon: IconEyeOff };
+  const nextStatus = getNextWatchStatus(item.estado);
+  const statusTitle =
+    nextStatus === "watching"
+      ? "Cambiar a viendo"
+      : nextStatus === "watched"
+        ? "Cambiar a visto"
+        : "Cambiar a no visto";
+  const StatusIcon = statusMeta.Icon;
   const metaRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const [visibleGenres, setVisibleGenres] = useState<string[]>([]);
@@ -94,8 +109,8 @@ export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { it
         </span>
         {showEye && (
           <div
-            className={`item-card-eye-wrap ${item.visto ? "visto" : "no-visto"}`}
-            title={item.visto ? "Visto" : "No visto"}
+            className={`item-card-eye-wrap ${statusMeta.className}`}
+            title={statusTitle}
             role="button"
             tabIndex={0}
             onClick={(e) => {
@@ -107,14 +122,10 @@ export default function ItemCard({ item, showEye, onClick, onToggleVisto }: { it
               if (e.key === "Enter" || e.key === " ") onToggleVisto?.();
             }}
           >
-            {item.visto ? (
-              <IconEye className="item-card-eye-icon" />
-            ) : (
-              <IconEyeOff className="item-card-eye-icon" />
-            )}
+            <StatusIcon className="item-card-eye-icon" />
           </div>
         )}
-        {!showEye && item.visto && <span className="item-card-badge visto">Visto</span>}
+        {!showEye && item.estado !== "unwatched" && <span className={`item-card-badge ${statusMeta.className}`}>{statusMeta.label}</span>}
       </div>
       <div className="item-card-body">
         <h3 className={`item-card-title ${visibleGenres.length > 0 ? "item-card-title-single-line" : ""}`}>{item.titulo}</h3>

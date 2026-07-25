@@ -5,12 +5,10 @@ import type { Env } from "../bindings";
 
 export type FilterPreferences = {
   autoApply: boolean;
-  soloNoVistos: boolean;
 };
 
 export const DEFAULT_FILTER_PREFERENCES: FilterPreferences = {
   autoApply: true,
-  soloNoVistos: true,
 };
 
 function decodePreferences(row: UserFilterPreferences | undefined): FilterPreferences {
@@ -18,14 +16,12 @@ function decodePreferences(row: UserFilterPreferences | undefined): FilterPrefer
 
   return {
     autoApply: row.autoApply,
-    soloNoVistos: row.soloNoVistos,
   };
 }
 
 function encodePreferences(preferences: FilterPreferences) {
   return {
     autoApply: preferences.autoApply,
-    soloNoVistos: preferences.soloNoVistos,
     tipo: "[]",
     tipoExcluir: "[]",
     genero: "[]",

@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Item } from "../api/items";
+import { getNextWatchStatus } from "../api/items";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
-import { IconX, IconSparkles, IconEye, IconExternalLink } from "./icons";
+import { IconX, IconSparkles, IconEye, IconEyeOff, IconCircleDot, IconExternalLink } from "./icons";
 import "./ShuffleAnimation.css";
 
 const CONFETTI_COLORS = [
@@ -32,12 +33,12 @@ export default function ShuffleAnimation({
   item,
   items,
   onClose,
-  onMarkWatched,
+  onAdvanceStatus,
 }: {
   item: Item;
   items: Item[];
   onClose: () => void;
-  onMarkWatched?: () => void;
+  onAdvanceStatus?: () => void;
 }) {
   const winnerId = item.id;
   const orbitItems = (items && items.length > 0 ? items : [item]).slice(0, 12);
@@ -192,6 +193,14 @@ export default function ShuffleAnimation({
   const hasUrl = !!item.url?.trim();
   const verEnlaceLabel = item.tipo === "youtube" ? "Ver en YouTube" : "Ver enlace";
   const tipoClass = MEDIA_TYPE_COLORS[item.tipo] ?? "";
+  const nextStatus = getNextWatchStatus(item.estado);
+  const nextStatusMeta =
+    nextStatus === "watching"
+      ? { label: "Viendo", Icon: IconCircleDot }
+      : nextStatus === "watched"
+        ? { label: "Vista", Icon: IconEye }
+        : { label: "No vista", Icon: IconEyeOff };
+  const NextStatusIcon = nextStatusMeta.Icon;
 
   const isAnimating = phase !== "done";
   const showWinnerModal = phase === "done" && showContent;
@@ -362,10 +371,10 @@ export default function ShuffleAnimation({
               </div>
 
               <footer className="shuffle-winner-footer">
-                {!item.visto && onMarkWatched && (
-                  <button type="button" className="btn-marcar-vista" onClick={onMarkWatched}>
-                    <IconEye className="btn-icon" />
-                    Vista
+                {onAdvanceStatus && (
+                  <button type="button" className="btn-marcar-vista" onClick={onAdvanceStatus}>
+                    <NextStatusIcon className="btn-icon" />
+                    {nextStatusMeta.label}
                   </button>
                 )}
                 {hasUrl && (

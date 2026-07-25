@@ -84,8 +84,8 @@ export async function rateLimitMiddleware(
       if (!allowed) {
         return c.json(
           { error: "Limite de health superado. Espera un minuto." },
-          429,
           {
+            status: 429,
             headers: {
               "Retry-After": String(WINDOW_SEC),
               "X-RateLimit-Remaining": "0",
@@ -101,8 +101,8 @@ export async function rateLimitMiddleware(
       if (!allowed) {
         return c.json(
           { error: "Demasiados intentos. Espera un minuto." },
-          429,
           {
+            status: 429,
             headers: {
               "Retry-After": String(WINDOW_SEC),
               "X-RateLimit-Remaining": "0",
@@ -117,8 +117,8 @@ export async function rateLimitMiddleware(
     if (!allowed) {
       return c.json(
         { error: "Limite de solicitudes superado. Espera un minuto." },
-        429,
         {
+          status: 429,
           headers: {
             "Retry-After": String(WINDOW_SEC),
             "X-RateLimit-Remaining": "0",

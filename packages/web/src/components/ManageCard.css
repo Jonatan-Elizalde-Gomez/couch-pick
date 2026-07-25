@@ -22,6 +22,10 @@
   opacity: 0.9;
 }
 
+.manage-card-watching {
+  border-color: rgb(0 114 143 / 0.24);
+}
+
 .manage-card-inner {
   display: flex;
   gap: 0.75rem;
@@ -57,6 +61,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.manage-card-watching .manage-card-watched-overlay {
+  background: rgb(0 114 143 / 0.2);
 }
 
 .manage-card-eye-icon {
@@ -268,6 +276,15 @@
 .action-unwatched:hover {
   background: var(--bg-elevated);
   color: var(--text);
+}
+
+.action-watching {
+  color: rgb(117 211 232);
+  background: rgb(0 114 143 / 0.12);
+}
+
+.action-watching:hover {
+  background: rgb(0 114 143 / 0.2);
 }
 
 .manage-card-action-edit {

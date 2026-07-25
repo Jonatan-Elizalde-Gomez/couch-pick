@@ -11,7 +11,6 @@ import type { Env } from "../bindings";
 
 const preferencesSchema = z.object({
   autoApply: z.boolean().optional(),
-  soloNoVistos: z.boolean().optional(),
 });
 
 export const preferencesRouter = new Hono<{ Bindings: Env }>();
@@ -42,7 +41,6 @@ preferencesRouter.put("/filters", async (c) => {
 
   const nextPreferences: FilterPreferences = {
     autoApply: parsed.data.autoApply ?? DEFAULT_FILTER_PREFERENCES.autoApply,
-    soloNoVistos: parsed.data.soloNoVistos ?? DEFAULT_FILTER_PREFERENCES.soloNoVistos,
   };
 
   await saveFilterPreferences(c.env, email, nextPreferences);

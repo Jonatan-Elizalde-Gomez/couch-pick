@@ -1,28 +1,40 @@
 import { useState } from "react";
 import type { Item } from "../api/items";
+import { getNextWatchStatus } from "../api/items";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_COLORS } from "../lib/constants";
-import { IconEye, IconEyeOff, IconPencil, IconTrash2 } from "./icons";
+import { IconEye, IconEyeOff, IconPencil, IconTrash2, IconCircleDot } from "./icons";
 import "./ManageCard.css";
 
 interface ManageCardProps {
   item: Item;
   onEdit: (item: Item) => void;
   onDelete: (id: string) => void;
-  onToggleWatched: (id: string) => void;
+  onCycleStatus: (id: string) => void;
 }
 
 export default function ManageCard({
   item,
   onEdit,
   onDelete,
-  onToggleWatched,
+  onCycleStatus,
 }: ManageCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const img = item.posterUrl ?? item.thumbnailUrl ?? null;
   const tipoClass = MEDIA_TYPE_COLORS[item.tipo] ?? "";
+  const nextStatus = getNextWatchStatus(item.estado);
+  const statusMeta =
+    item.estado === "watched"
+      ? { label: "Visto", Icon: IconEye, actionClass: "action-watched", cardClass: "manage-card-watched" }
+      : item.estado === "watching"
+        ? { label: "Viendo", Icon: IconCircleDot, actionClass: "action-watching", cardClass: "manage-card-watching" }
+        : { label: "No visto", Icon: IconEyeOff, actionClass: "action-unwatched", cardClass: "" };
+  const nextStatusLabel =
+    nextStatus === "watching" ? "Marcar viendo" : nextStatus === "watched" ? "Marcar visto" : "Marcar no visto";
+  const StatusIcon = statusMeta.Icon;
+  const OverlayIcon = item.estado === "watching" ? IconCircleDot : IconEye;
 
   return (
-    <div className={`manage-card ${item.visto ? "manage-card-watched" : ""}`}>
+    <div className={`manage-card ${statusMeta.cardClass}`.trim()}>
       <div className="manage-card-inner">
         <div className="manage-card-image">
           {img ? (
@@ -30,9 +42,9 @@ export default function ManageCard({
           ) : (
             <div className="manage-card-image-placeholder" />
           )}
-          {item.visto && (
+          {item.estado !== "unwatched" && (
             <div className="manage-card-watched-overlay">
-              <IconEye className="manage-card-eye-icon" />
+              <OverlayIcon className="manage-card-eye-icon" />
             </div>
           )}
         </div>
@@ -63,18 +75,9 @@ export default function ManageCard({
                       <IconPencil className="menu-icon" />
                       Editar
                     </button>
-                    <button type="button" onClick={() => { onToggleWatched(item.id); setMenuOpen(false); }}>
-                      {item.visto ? (
-                        <>
-                          <IconEyeOff className="menu-icon" />
-                          Marcar no visto
-                        </>
-                      ) : (
-                        <>
-                          <IconEye className="menu-icon" />
-                          Marcar visto
-                        </>
-                      )}
+                    <button type="button" onClick={() => { onCycleStatus(item.id); setMenuOpen(false); }}>
+                      {nextStatus === "watching" ? <IconCircleDot className="menu-icon" /> : nextStatus === "watched" ? <IconEye className="menu-icon" /> : <IconEyeOff className="menu-icon" />}
+                      {nextStatusLabel}
                     </button>
                     <hr className="menu-sep" />
                     <button
@@ -112,20 +115,11 @@ export default function ManageCard({
       <div className="manage-card-actions">
         <button
           type="button"
-          className={`manage-card-action ${item.visto ? "action-watched" : "action-unwatched"}`}
-          onClick={() => onToggleWatched(item.id)}
+          className={`manage-card-action ${statusMeta.actionClass}`}
+          onClick={() => onCycleStatus(item.id)}
         >
-          {item.visto ? (
-            <>
-              <IconEye className="action-icon" />
-              Visto
-            </>
-          ) : (
-            <>
-              <IconEyeOff className="action-icon" />
-              No visto
-            </>
-          )}
+          <StatusIcon className="action-icon" />
+          {statusMeta.label}
         </button>
         <div className="manage-card-action-sep" />
         <button

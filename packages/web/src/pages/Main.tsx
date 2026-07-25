@@ -3,7 +3,17 @@ import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getItems, getItemsPaginated, shuffle, updateItem, type Item, type ItemTipo, type ShuffleFilters } from "../api/items";
+import {
+  getItems,
+  getItemsPaginated,
+  shuffle,
+  updateItem,
+  getNextWatchStatus,
+  type Item,
+  type ItemTipo,
+  type ShuffleFilters,
+  type WatchStatus,
+} from "../api/items";
 import { getFilterPreferences, saveFilterPreferences } from "../api/preferences";
 import { GENRE_GROUP_LABELS, getGenreGroupsForTypes, getVisibleGenreOptions, MEDIA_TYPE_LABELS } from "../lib/constants";
 import {
@@ -20,6 +30,9 @@ import {
   IconLogOut,
   IconArrowLeft,
   IconArrowRight,
+  IconEye,
+  IconEyeOff,
+  IconCircleDot,
 } from "../components/icons";
 import ItemCard from "../components/ItemCard";
 import ItemDetailModal from "../components/ItemDetailModal";
@@ -36,6 +49,15 @@ const SCROLL_LOAD_THRESHOLD = 400;
 
 const TIPOS: ItemTipo[] = ["movie", "series", "anime", "youtube"];
 const TYPE_ICONS = { movie: IconFilm, series: IconTv, anime: IconPlay, youtube: IconYoutube };
+const STATUS_OPTIONS: Array<{
+  value: WatchStatus;
+  label: string;
+  Icon: ({ className }: { className?: string }) => JSX.Element;
+}> = [
+  { value: "unwatched", label: "No vistos", Icon: IconEyeOff },
+  { value: "watching", label: "Viendo", Icon: IconCircleDot },
+  { value: "watched", label: "Vistos", Icon: IconEye },
+];
 const emptyFilters: ShuffleFilters = {
   tipo: [],
   tipoExcluir: [],
@@ -43,7 +65,8 @@ const emptyFilters: ShuffleFilters = {
   generoExcluir: [],
   tag: [],
   tagExcluir: [],
-  soloNoVistos: true,
+  estado: [],
+  estadoExcluir: [],
 };
 
 function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
@@ -54,7 +77,8 @@ function filtersEqual(a: ShuffleFilters, b: ShuffleFilters): boolean {
     JSON.stringify(a.generoExcluir ?? []) === JSON.stringify(b.generoExcluir ?? []) &&
     JSON.stringify(a.tag ?? []) === JSON.stringify(b.tag ?? []) &&
     JSON.stringify(a.tagExcluir ?? []) === JSON.stringify(b.tagExcluir ?? []) &&
-    (a.soloNoVistos ?? false) === (b.soloNoVistos ?? false)
+    JSON.stringify(a.estado ?? []) === JSON.stringify(b.estado ?? []) &&
+    JSON.stringify(a.estadoExcluir ?? []) === JSON.stringify(b.estadoExcluir ?? [])
   );
 }
 
@@ -98,14 +122,6 @@ export default function Main() {
         const { preferences } = await getFilterPreferences();
         if (!active) return;
         setAutoApply(preferences.autoApply);
-        setFilters((current) => ({
-          ...current,
-          soloNoVistos: preferences.soloNoVistos || undefined,
-        }));
-        setAppliedFilters((current) => ({
-          ...current,
-          soloNoVistos: preferences.soloNoVistos || undefined,
-        }));
       } catch (error) {
         console.error(error);
       } finally {
@@ -130,14 +146,13 @@ export default function Main() {
     const timeoutId = window.setTimeout(() => {
       void saveFilterPreferences({
         autoApply,
-        soloNoVistos: !!filters.soloNoVistos,
       }).catch((error) => {
         console.error(error);
       });
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [autoApply, filters.soloNoVistos, isAuthenticated, preferencesLoaded]);
+  }, [autoApply, isAuthenticated, preferencesLoaded]);
 
   const filtersForApi = useMemo(() => ({
     ...(appliedFilters.tipo?.length ? { tipo: appliedFilters.tipo } : {}),
@@ -146,7 +161,7 @@ export default function Main() {
     ...(appliedFilters.generoExcluir?.length ? { generoExcluir: appliedFilters.generoExcluir } : {}),
     ...(appliedFilters.tag?.length ? { tag: appliedFilters.tag } : {}),
     ...(appliedFilters.tagExcluir?.length ? { tagExcluir: appliedFilters.tagExcluir } : {}),
-    ...(appliedFilters.soloNoVistos ? { soloNoVistos: true } : {}),
+    ...(appliedFilters.estado?.length ? { estado: appliedFilters.estado } : {}),
   }), [appliedFilters]);
 
   const hasPendingFilters = useMemo(() => !filtersEqual(filters, appliedFilters), [filters, appliedFilters]);
@@ -179,6 +194,20 @@ export default function Main() {
       return { ...f, tag: [...(f.tag ?? []), tag] };
     });
   };
+  const toggleStatusFilter = (status: WatchStatus) => {
+    setFilters((current) => {
+      const currentStatuses = current.estado ?? [];
+      const isActive = currentStatuses.includes(status);
+      const nextStatuses = isActive
+        ? currentStatuses.filter((value) => value !== status)
+        : [...currentStatuses, status];
+
+      return {
+        ...current,
+        estado: nextStatuses,
+      };
+    });
+  };
   const clearAllFilters = () => {
     setAutoApply(true);
     setFilters({ ...emptyFilters });
@@ -190,10 +219,12 @@ export default function Main() {
     (filters.genero?.length ?? 0) +
     (filters.generoExcluir?.length ?? 0) +
     (filters.tag?.length ?? 0) +
-    (filters.tagExcluir?.length ?? 0);
+    (filters.tagExcluir?.length ?? 0) +
+    (filters.estado?.length ?? 0);
   const tipoActiveCount = (filters.tipo?.length ?? 0) + (filters.tipoExcluir?.length ?? 0);
   const generoActiveCount = (filters.genero?.length ?? 0) + (filters.generoExcluir?.length ?? 0);
   const tagActiveCount = (filters.tag?.length ?? 0) + (filters.tagExcluir?.length ?? 0);
+  const statusActiveCount = filters.estado?.length ?? 0;
   const visibleGenreScopes = useMemo(() => getGenreGroupsForTypes(filters.tipo), [filters.tipo]);
   const visibleGenreOptions = useMemo(() => getVisibleGenreOptions(filters.tipo), [filters.tipo]);
   const genreOptionsByScope = useMemo(
@@ -233,7 +264,7 @@ export default function Main() {
 
   const availableTags = useMemo(() => {
     const sourceItems = catalogItems.filter((item) => {
-      if (filters.soloNoVistos && item.visto) return false;
+      if (filters.estado?.length && !filters.estado.includes(item.estado)) return false;
       if (filters.tipo?.length && !filters.tipo.includes(item.tipo)) return false;
       if (filters.tipoExcluir?.length && filters.tipoExcluir.includes(item.tipo)) return false;
       if (!includesAny(item.generos, filters.genero)) return false;
@@ -252,9 +283,9 @@ export default function Main() {
     });
   }, [
     catalogItems,
+    filters.estado,
     filters.genero,
     filters.generoExcluir,
-    filters.soloNoVistos,
     filters.tag,
     filters.tagExcluir,
     filters.tipo,
@@ -396,23 +427,32 @@ export default function Main() {
               </span>
             </label>
 
-            <label className={`filter-switch-card ${(filters.soloNoVistos ?? false) ? "filter-switch-card-on" : ""}`}>
+            <div className={`filter-switch-card filter-status-card ${statusActiveCount > 0 ? "filter-switch-card-on" : ""}`}>
               <span className="filter-switch-copy">
-                <span className="filter-switch-title">Solo no vistos</span>
-                <span className="filter-switch-description">Oculta lo ya visto para que el shuffle priorice contenido pendiente.</span>
+                <span className="filter-switch-title">Estado del progreso</span>
+                <span className="filter-switch-description">Combina no vistos, viendo y vistos; si no eliges ninguno, entran todos.</span>
               </span>
-              <span className="filter-switch-control">
-                <input
-                  type="checkbox"
-                  className="filter-switch-input"
-                  checked={filters.soloNoVistos ?? false}
-                  onChange={(e) => setFilters((f) => ({ ...f, soloNoVistos: e.target.checked || undefined }))}
-                />
-                <span className="filter-switch-track" aria-hidden>
-                  <span className="filter-switch-thumb" />
-                </span>
-              </span>
-            </label>
+              <div className="filter-status-buttons">
+                <button
+                  type="button"
+                  className={`filter-status-btn ${statusActiveCount === 0 ? "filter-status-btn-active" : ""}`}
+                  onClick={() => setFilters((current) => ({ ...current, estado: [] }))}
+                >
+                  Todos
+                </button>
+                {STATUS_OPTIONS.map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`filter-status-btn ${filters.estado?.includes(value) ? "filter-status-btn-active" : ""}`}
+                    onClick={() => toggleStatusFilter(value)}
+                  >
+                    <Icon className="filter-status-btn-icon" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="filters-legend">
@@ -709,8 +749,8 @@ export default function Main() {
               item={shuffleWinner}
               items={items}
               onClose={() => setShuffleWinner(null)}
-              onMarkWatched={async () => {
-                await updateItem(shuffleWinner.id, { visto: true });
+              onAdvanceStatus={async () => {
+                await updateItem(shuffleWinner.id, { estado: getNextWatchStatus(shuffleWinner.estado) });
                 queryClient.invalidateQueries({ queryKey: ["items"] });
               }}
             />
@@ -723,8 +763,8 @@ export default function Main() {
               key={selectedItem.id}
               item={selectedItem}
               onClose={() => setSelectedItem(null)}
-              onMarkWatched={async () => {
-                await updateItem(selectedItem.id, { visto: true });
+              onAdvanceStatus={async () => {
+                await updateItem(selectedItem.id, { estado: getNextWatchStatus(selectedItem.estado) });
                 queryClient.invalidateQueries({ queryKey: ["items"] });
                 setSelectedItem(null);
               }}
@@ -785,7 +825,7 @@ export default function Main() {
                         showEye
                         onClick={() => setSelectedItem(it)}
                         onToggleVisto={async () => {
-                          await updateItem(it.id, { visto: !it.visto });
+                          await updateItem(it.id, { estado: getNextWatchStatus(it.estado) });
                           queryClient.invalidateQueries({ queryKey: ["items"] });
                         }}
                       />

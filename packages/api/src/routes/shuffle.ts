@@ -10,6 +10,25 @@ function getQueryArray(url: URL, key: string): string[] {
   return raw.flatMap((s) => s.split(",").map((x) => x.trim()).filter(Boolean));
 }
 
+type WatchStatus = "unwatched" | "watching" | "watched";
+
+function resolveEstado(input: { estado?: string | null; visto?: boolean | null }): WatchStatus {
+  if (input.estado === "unwatched" || input.estado === "watching" || input.estado === "watched") {
+    return input.estado;
+  }
+
+  return input.visto ? "watched" : "unwatched";
+}
+
+function serializeItem<T extends { estado?: string | null; visto?: boolean | null }>(item: T) {
+  const estado = resolveEstado(item);
+  return {
+    ...item,
+    estado,
+    visto: estado === "watched",
+  };
+}
+
 /**
  * POST /shuffle: devuelve un item aleatorio del conjunto filtrado.
  * Filtros igual que GET /items (query params). Soporta múltiples tipo, tag, genero.
@@ -26,7 +45,8 @@ shuffleRouter.post("/", async (c) => {
   const url = new URL(c.req.url);
   const tipos = getQueryArray(url, "tipo");
   const tipoExcluir = getQueryArray(url, "tipoExcluir");
-  const soloNoVistos = c.req.query("soloNoVistos") === "true";
+  const estados = getQueryArray(url, "estado");
+  const estadosExcluir = getQueryArray(url, "estadoExcluir");
   const tagsFilter = getQueryArray(url, "tag");
   const tagsExcluir = getQueryArray(url, "tagExcluir");
   const generos = getQueryArray(url, "genero");
@@ -36,7 +56,8 @@ shuffleRouter.post("/", async (c) => {
   const conditions = [];
   if (tipos.length > 0) conditions.push(inArray(items.tipo, tipos as any));
   if (tipoExcluir.length > 0) conditions.push(not(inArray(items.tipo, tipoExcluir as any)));
-  if (soloNoVistos) conditions.push(eq(items.visto, false));
+  if (estados.length > 0) conditions.push(inArray(items.estado, estados as any));
+  if (estadosExcluir.length > 0) conditions.push(not(inArray(items.estado, estadosExcluir as any)));
 
   let list = conditions.length
     ? await db.select().from(items).where(and(...conditions))
@@ -107,7 +128,7 @@ shuffleRouter.post("/", async (c) => {
     db.select({ genero: itemGeneros.genero }).from(itemGeneros).where(eq(itemGeneros.itemId, winner.id)),
   ]);
   const item = {
-    ...winner,
+    ...serializeItem(winner),
     tags: tagRows.map((r) => r.name),
     generos: genRows.map((r) => r.genero),
   };

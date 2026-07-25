@@ -8,6 +8,7 @@ export const items = sqliteTable("items", {
   thumbnailUrl: text("thumbnail_url"),
   posterUrl: text("poster_url"),
   url: text("url"),
+  estado: text("estado", { enum: ["unwatched", "watching", "watched"] }).notNull().default("unwatched"),
   visto: integer("visto", { mode: "boolean" }).notNull().default(false),
   externalId: text("external_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
